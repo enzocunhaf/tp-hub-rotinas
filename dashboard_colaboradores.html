@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Túlio Parca Advogados</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════
+   DESIGN TOKENS — dark com paleta viva
+══════════════════════════════════════════════ */
+:root{
+  --ink:     #080a0f;
+  --ink1:    #0f1117;
+  --ink2:    #181c26;
+  --ink3:    #22273a;
+  --ink4:    #2e344d;
+  --wire:    #252b3e;
+  --wire2:   #323a56;
+  --mist:    #8b93b0;
+  --mist2:   #525c7a;
+  --snow:    #f0f2ff;
+  --snow2:   #c8ceea;
+  --gold:    #e0a825;
+  --gold-l:  #f5c84a;
+  --gold-d:  #a87a10;
+  --gold-bg: rgba(224,168,37,.11);
+  --green:   #22c97a;
+  --green-bg:rgba(34,201,122,.11);
+  --red:     #f04444;
+  --red-bg:  rgba(240,68,68,.11);
+  --blue:    #3b9eff;
+  --blue-bg: rgba(59,158,255,.11);
+  --or:      #f07030;
+  --or-bg:   rgba(240,112,48,.11);
+  --purple:  #a78bfa;
+  --r:  10px;
+  --r2: 6px;
+  --sh: 0 8px 40px rgba(0,0,0,.6);
+  --font:'Montserrat',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--font)}
+body{background:var(--ink);color:var(--snow);overflow:hidden;display:flex;align-items:stretch}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--wire2);border-radius:2px}
+
+/* ══════════════════════════════════════════════
+   LOGO — SVG fiel ao PNG original
+   PARA USAR O PNG REAL: substitua todo o bloco
+   <svg class="logo-mark">…</svg> por:
+   <img src="logo.png" class="logo-mark" style="object-fit:contain">
+══════════════════════════════════════════════ */
+.logo-mark{
+  display:block;
+  /* ajuste a largura conforme o contexto */
+}
+
+/* ══════════════════════════════════════════════
+   AUTH SCREEN
+══════════════════════════════════════════════ */
+#auth-screen{
+  position:fixed;inset:0;
+  background:var(--ink);
+  display:flex;align-items:center;justify-content:center;
+  z-index:900;
+  padding:20px;
+}
+.auth-wrap{
+  display:flex;flex-direction:column;align-items:center;
+  gap:36px;width:100%;max-width:400px;
+}
+
+/* Logo na tela de auth */
+.auth-logo{width:200px}
+
+.auth-card{
+  width:100%;background:var(--ink1);
+  border:1px solid var(--wire);border-radius:var(--r);
+  overflow:hidden;box-shadow:var(--sh);
+}
+
+/* Toggle entrar / cadastrar */
+.auth-toggle{display:flex;border-bottom:1px solid var(--wire)}
+.auth-toggle-btn{
+  flex:1;padding:15px;
+  background:none;border:none;
+  font-family:var(--font);font-size:12px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--mist);cursor:pointer;
+  border-bottom:2px solid transparent;
+  margin-bottom:-1px;transition:all .2s;
+}
+.auth-toggle-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.auth-toggle-btn:hover:not(.active){color:var(--snow2)}
+
+/* Auth panels */
+.auth-panel{display:none;padding:28px 32px 32px}
+.auth-panel.active{display:block}
+.auth-panel-title{
+  font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:var(--mist2);margin-bottom:22px;
+}
+
+/* Form fields */
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--mist2)}
+.field input,.field select{
+  padding:11px 14px;background:var(--ink2);
+  border:1px solid var(--wire);border-radius:var(--r2);
+  color:var(--snow);font-family:var(--font);font-size:13px;font-weight:500;
+  outline:none;transition:border-color .2s;
+}
+.field input::placeholder{color:var(--mist2)}
+.field input:focus,.field select:focus{border-color:var(--gold-d);box-shadow:0 0 0 3px rgba(184,146,42,.08)}
+.field select option{background:var(--ink2);color:var(--snow)}
+
+.auth-submit{
+  width:100%;padding:13px;margin-top:6px;border-radius:var(--r2);border:none;
+  background:var(--gold);color:var(--ink);
+  font-family:var(--font);font-size:12px;font-weight:800;
+  letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;transition:all .2s;
+}
+.auth-submit:hover{background:var(--gold-l);box-shadow:0 4px 20px rgba(184,146,42,.25)}
+
+.auth-err{
+  font-size:11px;font-weight:600;color:var(--red);
+  text-align:center;min-height:16px;margin-bottom:4px;
+}
+.auth-ok{
+  font-size:11px;font-weight:600;color:var(--green);
+  text-align:center;min-height:16px;margin-bottom:4px;display:none;
+}
+
+.auth-footer{
+  font-size:10px;color:var(--mist2);text-align:center;
+  margin-top:12px;letter-spacing:.3px;line-height:1.6;
+}
+
+/* ══════════════════════════════════════════════
+   APP SHELL
+══════════════════════════════════════════════ */
+#app{display:none;flex:1;overflow:hidden;flex-direction:row}
+
+/* ─── SIDEBAR ─────────────────────────────── */
+aside{
+  width:240px;min-width:240px;
+  background:var(--ink1);border-right:1px solid var(--wire);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.side-logo{
+  padding:22px 20px 18px;border-bottom:1px solid var(--wire);
+  display:flex;justify-content:center;align-items:center;
+}
+.side-logo-img{width:136px}
+
+nav{flex:1;overflow-y:auto;padding:8px 0}
+.nav-group-label{
+  font-size:8.5px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;
+  color:var(--mist2);padding:14px 16px 4px;
+}
+nav a{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 16px;color:var(--mist);font-size:12px;font-weight:600;
+  cursor:pointer;border-left:2px solid transparent;
+  transition:all .15s;user-select:none;letter-spacing:.3px;
+}
+nav a:hover{color:var(--snow2);background:rgba(255,255,255,.03)}
+nav a.active{color:var(--gold);background:var(--gold-bg);border-left-color:var(--gold)}
+.ni{
+  width:28px;height:28px;border-radius:6px;display:flex;align-items:center;
+  justify-content:center;font-size:14px;background:rgba(255,255,255,.04);flex-shrink:0;
+}
+nav a.active .ni{background:var(--gold-bg)}
+
+.side-foot{
+  padding:12px 16px;border-top:1px solid var(--wire);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.side-user-name{font-size:12px;font-weight:700;color:var(--snow2)}
+.side-user-role{font-size:9px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-top:1px}
+.btn-exit{
+  background:none;border:none;cursor:pointer;
+  color:var(--mist2);font-size:14px;padding:5px;border-radius:5px;
+  transition:all .2s;flex-shrink:0;
+}
+.btn-exit:hover{color:var(--red);background:var(--red-bg)}
+
+/* ─── MAIN ────────────────────────────────── */
+main{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.topbar{
+  background:var(--ink1);border-bottom:1px solid var(--wire);
+  padding:0 28px;height:58px;display:flex;align-items:center;
+  justify-content:space-between;flex-shrink:0;
+}
+.tb-left{display:flex;flex-direction:column;gap:2px}
+.tb-title{font-size:14px;font-weight:800;color:var(--snow);letter-spacing:.3px}
+.tb-sub{font-size:10px;color:var(--mist2);font-weight:500;letter-spacing:.5px}
+.tb-clock{font-size:13px;font-weight:700;color:var(--mist2);letter-spacing:1px}
+
+.content{flex:1;overflow-y:auto;padding:24px 28px}
+
+/* ─── TAB PANELS ──────────────────────────── */
+.tp{display:none}.tp.active{display:block}
+
+/* ─── CARD ────────────────────────────────── */
+.card{
+  background:var(--ink1);border:1px solid var(--wire);
+  border-radius:var(--r);padding:20px;margin-bottom:16px;
+  box-shadow:0 2px 16px rgba(0,0,0,.3);
+}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.card-title{
+  font-size:10px;font-weight:800;color:var(--snow);
+  text-transform:uppercase;letter-spacing:1.8px;
+  display:flex;align-items:center;gap:8px;
+}
+.card-title::before{
+  content:'';width:2px;height:12px;background:var(--gold);
+  border-radius:1px;display:block;flex-shrink:0;
+}
+.chip{
+  background:var(--gold-bg);color:var(--gold);
+  font-size:10px;font-weight:700;padding:3px 9px;
+  border-radius:20px;border:1px solid rgba(184,146,42,.25);letter-spacing:.5px;
+}
+
+/* ─── FORM ────────────────────────────────── */
+.fg-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fg{display:flex;flex-direction:column;gap:6px}
+.fg.full{grid-column:1/-1}
+.fg label{font-size:9px;font-weight:800;color:var(--mist2);text-transform:uppercase;letter-spacing:1.2px}
+.fg input,.fg select,.fg textarea{
+  padding:10px 13px;background:var(--ink2);border:1px solid var(--wire);
+  border-radius:var(--r2);color:var(--snow);font-family:var(--font);
+  font-size:13px;font-weight:500;outline:none;transition:border-color .2s;
+}
+.fg input::placeholder,.fg textarea::placeholder{color:var(--mist2)}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--gold-d);box-shadow:0 0 0 3px rgba(184,146,42,.07)}
+.fg select option{background:var(--ink2)}
+.fg textarea{resize:vertical;min-height:64px}
+.form-row{margin-top:14px;display:flex;gap:9px;align-items:center}
+
+/* ─── BUTTONS ─────────────────────────────── */
+.btn{
+  padding:9px 18px;border-radius:var(--r2);border:none;cursor:pointer;
+  font-family:var(--font);font-size:11px;font-weight:800;letter-spacing:.8px;
+  text-transform:uppercase;transition:all .2s;display:inline-flex;align-items:center;gap:6px;
+}
+.btn-gold{background:var(--gold);color:var(--ink)}
+.btn-gold:hover{background:var(--gold-l);box-shadow:0 3px 14px rgba(184,146,42,.3)}
+.btn-ghost{background:transparent;border:1px solid var(--wire2);color:var(--mist)}
+.btn-ghost:hover{border-color:var(--gold-d);color:var(--gold)}
+.btn-sm{padding:6px 12px;font-size:10px}
+.btn-red{background:var(--red-bg);color:var(--red);border:1px solid rgba(192,57,43,.2)}
+.btn-red:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-blue{background:var(--blue-bg);color:var(--blue);border:1px solid rgba(74,127,165,.2)}
+.btn-blue:hover{background:var(--blue);color:#fff}
+
+/* ─── TABLE ───────────────────────────────── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead tr{border-bottom:1px solid var(--wire2)}
+thead th{
+  padding:8px 12px;text-align:left;
+  font-size:9px;font-weight:800;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--mist2);
+}
+tbody tr{border-bottom:1px solid var(--wire);transition:background .12s}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+tbody td{padding:11px 12px}
+.td-name{font-weight:700;color:var(--snow);font-size:13px}
+.td-dim{font-size:10px;color:var(--mist2);margin-top:1px}
+
+/* ─── BADGES ──────────────────────────────── */
+.badge{
+  display:inline-block;padding:2px 9px;border-radius:20px;
+  font-size:9px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;
+}
+.b-socio{background:var(--gold-bg);color:var(--gold);border:1px solid rgba(184,146,42,.2)}
+.b-colab{background:var(--blue-bg);color:var(--blue);border:1px solid rgba(74,127,165,.2)}
+.b-adv{background:var(--gold-bg);color:var(--gold);border:1px solid rgba(184,146,42,.2)}
+.b-adm{background:var(--blue-bg);color:var(--blue);border:1px solid rgba(74,127,165,.2)}
+
+/* ─── STATS ───────────────────────────────── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.stat{
+  background:var(--ink1);border:1px solid var(--wire);
+  border-radius:var(--r);padding:16px;position:relative;overflow:hidden;
+}
+.stat::after{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--gold);
+}
+.stat.g::after{background:var(--green)}
+.stat.r::after{background:var(--red)}
+.stat.b::after{background:var(--blue)}
+.stat-lbl{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--mist2);margin-bottom:5px}
+.stat-val{font-size:28px;font-weight:800;color:var(--snow);line-height:1}
+.stat.g .stat-val{color:var(--green)}
+.stat.r .stat-val{color:var(--red)}
+.stat-sub{font-size:9px;color:var(--mist2);margin-top:4px}
+
+/* ─── PROGRESS ────────────────────────────── */
+.pg-wrap{background:var(--ink3);border-radius:20px;height:5px;overflow:hidden}
+.pg-bar{height:100%;border-radius:20px;background:var(--green);transition:width .4s ease}
+.pg-bar.mid{background:var(--gold)}
+.pg-bar.low{background:var(--red)}
+
+/* ─── PERIOD TABS ─────────────────────────── */
+.ptabs{display:flex;gap:6px;margin-bottom:18px}
+.ptab{
+  padding:7px 16px;border-radius:20px;border:1px solid var(--wire2);
+  font-size:10px;font-weight:700;cursor:pointer;background:var(--ink1);
+  color:var(--mist);transition:all .15s;font-family:var(--font);letter-spacing:.5px;
+  text-transform:uppercase;
+}
+.ptab:hover{border-color:var(--gold-d);color:var(--gold-l)}
+.ptab.active{background:var(--gold-bg);color:var(--gold);border-color:rgba(184,146,42,.3)}
+.pp{display:none}.pp.active{display:block}
+
+/* ─── CHECKLIST TABS ──────────────────────── */
+.cktabs{display:flex;gap:5px;margin-bottom:14px}
+.cktab{
+  padding:6px 14px;border-radius:20px;border:1px solid var(--wire);
+  font-size:10px;font-weight:700;cursor:pointer;background:var(--ink2);
+  color:var(--mist);transition:all .15s;font-family:var(--font);letter-spacing:.5px;text-transform:uppercase;
+}
+.cktab:hover{border-color:var(--gold-d);color:var(--gold-l)}
+.cktab.active{background:var(--gold-bg);color:var(--gold);border-color:rgba(184,146,42,.3)}
+.ckp{display:none}.ckp.active{display:block}
+
+/* ─── CHECKLIST ITEM ──────────────────────── */
+.cki{
+  display:flex;align-items:center;gap:9px;
+  padding:10px 12px;border-radius:var(--r2);
+  background:var(--ink2);border:1px solid var(--wire);
+  margin-bottom:6px;transition:border-color .15s;
+}
+.cki:hover{border-color:var(--wire2)}
+.cki.done{opacity:.45}
+.cki input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:pointer;flex-shrink:0;padding:0;border:none}
+.cki-lbl{font-size:12px;font-weight:500;color:var(--snow);cursor:pointer;flex:1;font-family:var(--font)}
+.cki.done .cki-lbl{text-decoration:line-through;color:var(--mist2)}
+/* frequência badge */
+.freq-badge{
+  font-size:8.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;
+  padding:2px 7px;border-radius:8px;white-space:nowrap;flex-shrink:0;
+}
+.freq-d{background:rgba(34,201,122,.13);color:var(--green);border:1px solid rgba(34,201,122,.2)}
+.freq-s{background:rgba(224,168,37,.13);color:var(--gold);border:1px solid rgba(224,168,37,.2)}
+.freq-q{background:rgba(59,158,255,.13);color:var(--blue);border:1px solid rgba(59,158,255,.2)}
+.freq-m{background:rgba(240,112,48,.13);color:var(--or);border:1px solid rgba(240,112,48,.2)}
+.freq-p{background:rgba(160,120,250,.13);color:var(--purple);border:1px solid rgba(160,120,250,.2)}
+/* ações da tarefa */
+.ck-actions{display:flex;gap:3px;flex-shrink:0}
+.ck-btn{background:none;border:none;color:var(--mist2);cursor:pointer;font-size:12px;padding:3px 5px;transition:color .15s;border-radius:4px}
+.ck-btn.edit:hover{color:var(--gold);background:var(--gold-bg)}
+.ck-btn.del:hover{color:var(--red);background:var(--red-bg)}
+/* modo edição inline */
+.cki-edit-form{display:flex;gap:7px;flex:1;align-items:center}
+.cki-edit-form input,.cki-edit-form select{
+  padding:5px 9px;background:var(--ink3);border:1px solid var(--wire2);
+  border-radius:var(--r2);color:var(--snow);font-family:var(--font);
+  font-size:12px;font-weight:500;outline:none;
+}
+.cki-edit-form input{flex:1}
+.cki-edit-form input:focus,.cki-edit-form select:focus{border-color:var(--gold-d)}
+.cki-save{background:var(--gold);color:var(--ink);border:none;padding:5px 10px;border-radius:var(--r2);font-size:11px;font-weight:800;cursor:pointer;font-family:var(--font)}
+.cki-cancel{background:none;border:1px solid var(--wire2);color:var(--mist);padding:5px 9px;border-radius:var(--r2);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)}
+/* add-row expandida */
+.add-task-wrap{margin-top:12px;background:var(--ink3);border:1px solid var(--wire2);border-radius:var(--r);padding:12px}
+.add-task-wrap .add-task-label{font-size:9px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--mist2);margin-bottom:8px}
+.add-task-fields{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.add-task-fields input{flex:1;min-width:160px;padding:9px 12px;background:var(--ink2);border:1px solid var(--wire);border-radius:var(--r2);color:var(--snow);font-family:var(--font);font-size:12px;font-weight:500;outline:none;transition:border-color .2s}
+.add-task-fields input:focus{border-color:var(--gold-d)}
+.add-task-fields select{padding:9px 10px;background:var(--ink2);border:1px solid var(--wire);border-radius:var(--r2);color:var(--snow);font-family:var(--font);font-size:11px;font-weight:600;outline:none;transition:border-color .2s;cursor:pointer}
+.add-task-fields select:focus{border-color:var(--gold-d)}
+.add-task-fields .daterange-wrap{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.add-task-fields .daterange-wrap label{color:var(--mist2);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.add-task-fields .daterange-wrap input[type="date"]{padding:7px 8px;background:var(--ink2);border:1px solid var(--wire);border-radius:var(--r2);color:var(--snow);font-family:var(--font);font-size:11px;font-weight:600;outline:none;transition:border-color .2s;width:130px;cursor:pointer;color-scheme:dark}
+.add-task-fields .daterange-wrap input[type="date"]:focus{border-color:var(--gold-d)}
+.add-task-fields .daterange-sep{color:var(--mist2);font-size:11px;font-weight:700}
+
+/* ─── COLAB HEADER ────────────────────────── */
+.colab-hdr{
+  background:var(--ink1);border:1px solid var(--wire);border-radius:var(--r);
+  padding:18px 22px;display:flex;align-items:center;gap:16px;
+  margin-bottom:16px;position:relative;overflow:hidden;
+}
+.colab-hdr::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--gold)}
+.avatar{
+  width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(135deg,var(--gold-d),var(--gold));
+  display:flex;align-items:center;justify-content:center;
+  color:var(--ink);font-size:15px;font-weight:800;flex-shrink:0;
+}
+.ci-name{font-size:15px;font-weight:800;color:var(--snow)}
+.ci-role{font-size:10px;color:var(--mist);margin-top:2px;font-weight:600;letter-spacing:.3px}
+.ci-meta{margin-left:auto;text-align:right}
+.ci-ml{font-size:9px;font-weight:700;color:var(--mist2);text-transform:uppercase;letter-spacing:1px}
+.ci-mv{font-size:12px;font-weight:700;color:var(--gold);margin-top:2px}
+
+/* ─── SEL BAR ─────────────────────────────── */
+.sel-bar{
+  background:var(--ink1);border:1px solid var(--wire);border-radius:var(--r);
+  padding:12px 18px;display:flex;align-items:center;gap:12px;margin-bottom:18px;
+}
+.sel-bar label{font-size:9px;font-weight:800;color:var(--mist2);text-transform:uppercase;letter-spacing:1.2px;white-space:nowrap}
+.sel-bar select{flex:1;max-width:300px;padding:8px 12px;background:var(--ink2);border:1px solid var(--wire);border-radius:var(--r2);color:var(--snow);font-family:var(--font);font-size:12px;font-weight:600;outline:none}
+
+/* ─── GERAL GRID ──────────────────────────── */
+.gg{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.gc{
+  background:var(--ink1);border:1px solid var(--wire);border-radius:var(--r);
+  padding:14px;cursor:pointer;transition:all .15s;
+}
+.gc:hover{border-color:var(--gold-d);transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.gc-top{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.gc .avatar{width:34px;height:34px;font-size:12px}
+.gc-name{font-size:12px;font-weight:700;color:var(--snow)}
+.gc-role{font-size:9px;color:var(--mist2);font-weight:600;letter-spacing:.3px}
+.gc-pct{font-size:16px;font-weight:800;margin-left:auto}
+.pg{color:var(--green)}.pm{color:var(--gold)}.pr{color:var(--red)}
+
+/* ─── PROG MINI ───────────────────────────── */
+.pm-row{display:flex;gap:16px;margin-top:14px}
+.pm-item{flex:1}
+.pm-lbl{display:flex;justify-content:space-between;font-size:9px;font-weight:700;color:var(--mist);margin-bottom:4px;letter-spacing:.3px}
+.pm-lbl span:last-child{color:var(--gold-l)}
+
+/* ─── MINHA ÁREA HDR ──────────────────────── */
+.ma-hdr{
+  background:var(--ink1);border:1px solid var(--wire);border-radius:var(--r);
+  padding:20px 24px;margin-bottom:16px;position:relative;overflow:hidden;
+}
+.ma-hdr::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--gold)}
+.ma-top{display:flex;align-items:center;gap:14px}
+.ma-top .avatar{width:48px;height:48px;font-size:17px}
+.ma-name{font-size:17px;font-weight:800;color:var(--snow)}
+.ma-role{font-size:10px;color:var(--gold);font-weight:700;margin-top:2px;letter-spacing:.5px;text-transform:uppercase}
+
+/* ─── MODAL (editar colaborador) ──────────── */
+.modal-bg{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+  z-index:800;align-items:center;justify-content:center;padding:20px;
+}
+.modal-bg.open{display:flex}
+.modal{
+  background:var(--ink1);border:1px solid var(--wire);border-radius:var(--r);
+  padding:28px;width:100%;max-width:480px;box-shadow:var(--sh);
+  position:relative;
+}
+.modal-title{font-size:11px;font-weight:800;color:var(--snow);text-transform:uppercase;letter-spacing:2px;margin-bottom:22px;display:flex;align-items:center;gap:8px}
+.modal-title::before{content:'';width:2px;height:12px;background:var(--gold);border-radius:1px;display:block}
+.modal-close{
+  position:absolute;top:16px;right:16px;
+  background:none;border:none;cursor:pointer;color:var(--mist2);font-size:18px;
+  transition:color .15s;padding:4px;border-radius:4px;
+}
+.modal-close:hover{color:var(--red)}
+
+/* ─── OBS BOX ─────────────────────────────── */
+.obs-box{
+  background:rgba(176,107,46,.06);border:1px solid rgba(176,107,46,.18);
+  border-radius:var(--r2);padding:10px 14px;margin-bottom:14px;
+  font-size:11px;color:var(--mist);
+}
+.obs-box strong{color:var(--or);margin-right:4px}
+
+/* ─── TAGS ────────────────────────────────── */
+.tag{font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:1px;padding:2px 8px;border-radius:10px}
+.tag-d{background:var(--blue-bg);color:var(--blue)}
+.tag-s{background:var(--or-bg);color:var(--or)}
+.tag-m{background:var(--green-bg);color:var(--green)}
+
+/* ─── ALERT ───────────────────────────────── */
+.alert{padding:10px 14px;border-radius:var(--r2);font-size:11px;font-weight:600;margin-bottom:12px;display:none}
+.alert.ok{background:var(--green-bg);color:var(--green);border:1px solid rgba(61,158,110,.2);display:block}
+.alert.err{background:var(--red-bg);color:var(--red);border:1px solid rgba(192,57,43,.2);display:block}
+
+/* ─── EMPTY ───────────────────────────────── */
+.empty{text-align:center;padding:40px 20px;color:var(--mist2);display:flex;flex-direction:column;align-items:center;gap:8px}
+.empty-ico{font-size:32px;opacity:.3}
+.empty p{font-size:12px;font-weight:500}
+
+/* ─── RESPONSIVE ──────────────────────────── */
+@media(max-width:900px){.stats-row{grid-template-columns:1fr 1fr}}
+@media(max-width:680px){
+  aside{width:56px;min-width:56px}
+  .side-logo,.nav-group-label,.side-foot .side-user-name,.side-foot .side-user-role{display:none}
+  nav a span:not(.ni){display:none}
+  .content{padding:14px}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     AUTH SCREEN
+══════════════════════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-wrap">
+
+    <!--
+    ╔══════════════════════════════════════════╗
+    ║  LOGO — COMO USAR O PNG REAL:            ║
+    ║  1. Coloque logo.png na mesma pasta      ║
+    ║     deste arquivo HTML                   ║
+    ║  2. Substitua o bloco <svg> abaixo por:  ║
+    ║  <img src="logo.png" class="auth-logo"   ║
+    ║       style="width:200px;               ║
+    ║       object-fit:contain">               ║
+    ╚══════════════════════════════════════════╝
+    -->
+    <svg class="auth-logo" viewBox="0 0 320 210" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- TP MONOGRAM — fiel ao PNG original -->
+      <!-- T: crossbar com serifas finas -->
+      <rect x="58"  y="18" width="84" height="9"  fill="#e0a825"/><!-- crossbar -->
+      <rect x="50"  y="18" width="18" height="5"  fill="#e0a825"/><!-- serifa esq topo -->
+      <rect x="132" y="18" width="18" height="5"  fill="#e0a825"/><!-- serifa dir topo -->
+      <!-- haste T -->
+      <rect x="92"  y="18" width="10" height="82" fill="#e0a825"/>
+      <!-- serifas base T -->
+      <rect x="82"  y="95" width="30" height="5"  fill="#e0a825"/>
+
+      <!-- P: haste vertical + bowl serifado -->
+      <rect x="152" y="18" width="10" height="82" fill="#e0a825"/>
+      <!-- serifa topo P -->
+      <rect x="144" y="18" width="26" height="5"  fill="#e0a825"/>
+      <!-- serifa base P -->
+      <rect x="144" y="95" width="26" height="5"  fill="#e0a825"/>
+      <!-- Bowl do P — path oval elegante -->
+      <path d="M162 23 L198 23 Q230 23 230 52.5 Q230 82 198 82 L162 82 Z" fill="#e0a825"/>
+      <!-- vazado interior do bowl -->
+      <path d="M168 32 L196 32 Q220 32 220 52.5 Q220 73 196 73 L168 73 Z" fill="#080a0f"/>
+      <!-- ponte bowl-haste -->
+      <rect x="162" y="23" width="9" height="59" fill="#e0a825"/>
+
+      <!-- Linha decorativa superior -->
+      <rect x="20"  y="114" width="280" height="1" fill="#e0a825" opacity="0.4"/>
+
+      <!-- TÚLIO PARCA — small caps serifado -->
+      <!-- Usando font-variant e Georgia para aproximar o original -->
+      <text x="160" y="152"
+        font-family="Georgia,'Times New Roman',serif"
+        font-size="26"
+        letter-spacing="8"
+        fill="#e0a825"
+        text-anchor="middle"
+        font-style="normal"
+        font-weight="normal">TÚLIO PARCA</text>
+
+      <!-- Linha decorativa inferior -->
+      <rect x="20"  y="164" width="280" height="1" fill="#e0a825" opacity="0.4"/>
+
+      <!-- ADVOGADOS -->
+      <text x="160" y="187"
+        font-family="Georgia,'Times New Roman',serif"
+        font-size="13"
+        letter-spacing="10"
+        fill="#a87a10"
+        text-anchor="middle">ADVOGADOS</text>
+    </svg>
+
+    <div class="auth-card">
+      <div class="auth-toggle">
+        <button class="auth-toggle-btn active" id="tog-login"  onclick="switchAuth('login')">Entrar</button>
+        <button class="auth-toggle-btn"        id="tog-cad"    onclick="switchAuth('cad')">Cadastrar</button>
+      </div>
+
+      <!-- PAINEL ENTRAR -->
+      <div class="auth-panel active" id="apanel-login">
+        <div class="auth-panel-title">Acesso ao sistema</div>
+        <div class="field">
+          <label>E-mail</label>
+          <input type="email" id="l-email" placeholder="seu@email.com.br"
+            onkeydown="if(event.key==='Enter')login()">
+        </div>
+        <div class="field">
+          <label>Senha</label>
+          <input type="password" id="l-senha" placeholder="••••••••"
+            onkeydown="if(event.key==='Enter')login()">
+        </div>
+        <div class="auth-err" id="l-err"></div>
+        <button class="auth-submit" onclick="login()">Entrar</button>
+        <div class="auth-footer">Seus dados ficam seguros no dispositivo.</div>
+      </div>
+
+      <!-- PAINEL CADASTRAR -->
+      <div class="auth-panel" id="apanel-cad">
+        <div class="auth-panel-title">Novo acesso</div>
+        <div class="field">
+          <label>Nome Completo</label>
+          <input type="text" id="c-nome" placeholder="Ex.: Maria da Silva">
+        </div>
+        <div class="field">
+          <label>E-mail</label>
+          <input type="email" id="c-email" placeholder="maria@tulioparca.com.br">
+        </div>
+        <div class="field">
+          <label>Senha</label>
+          <input type="password" id="c-senha" placeholder="Mínimo 6 caracteres">
+        </div>
+        <div class="field">
+          <label>Função Interna</label>
+          <select id="c-funcao">
+            <option value="">Selecione...</option>
+            <option value="colaborador">Colaborador</option>
+            <option value="socio">Sócio(a)</option>
+          </select>
+        </div>
+        <div class="auth-err" id="c-err"></div>
+        <div class="auth-ok" id="c-ok">Cadastro realizado! Faça login.</div>
+        <button class="auth-submit" onclick="cadastrar()">Criar Conta</button>
+        <div class="auth-footer">Novos cadastros de Sócio(a) requerem aprovação do gestor.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MODAL EDITAR / ADICIONAR USUÁRIO
+══════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-user">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title" id="modal-title">Editar Colaborador</div>
+    <input type="hidden" id="m-id">
+    <div class="fg-grid">
+      <div class="fg full"><label>Nome Completo</label><input id="m-nome" placeholder="Nome completo"></div>
+      <div class="fg"><label>E-mail</label><input type="email" id="m-email" placeholder="email@..."></div>
+      <div class="fg">
+        <label>Função Interna</label>
+        <select id="m-funcao">
+          <option value="colaborador">Colaborador</option>
+          <option value="socio">Sócio(a)</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Cargo / Função</label>
+        <select id="m-cargo">
+          <option value="">Selecione...</option>
+          <option>Sócio(a)</option>
+          <option>Advogado(a) Associado(a)</option>
+          <option>Estagiário(a) de Direito</option>
+          <option>Assistente Administrativo(a)</option>
+          <option>Secretário(a)</option>
+          <option>Recepcionista</option>
+          <option>Outro</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Área</label>
+        <select id="m-area">
+          <option value="">Selecione...</option>
+          <option>Cível</option><option>Trabalhista</option><option>Tributário</option>
+          <option>Empresarial</option><option>Criminal</option>
+          <option>Administrativo</option><option>Família e Sucessões</option><option>Geral</option>
+        </select>
+      </div>
+      <div class="fg"><label>Telefone</label><input id="m-tel" placeholder="(11) 99999-9999"></div>
+      <div class="fg"><label>Admissão</label><input type="date" id="m-adm"></div>
+      <div class="fg full"><label>Observações</label>
+        <textarea id="m-obs" placeholder="Informações adicionais..."></textarea>
+      </div>
+    </div>
+    <div id="m-err" class="alert" style="margin-top:12px"></div>
+    <div class="form-row" style="margin-top:16px">
+      <button class="btn btn-gold" onclick="salvarModal()">Salvar</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     APP SHELL
+══════════════════════════════════════════════ -->
+<div id="app" style="display:flex;flex:1;overflow:hidden;width:100%">
+
+  <!-- SIDEBAR -->
+  <aside>
+    <div class="side-logo">
+      <!--
+      LOGO NA SIDEBAR — mesma instrução: substitua o SVG por:
+      <img src="logo.png" class="side-logo-img" style="object-fit:contain">
+      -->
+      <svg class="side-logo-img" viewBox="0 0 320 210" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="58"  y="18" width="84" height="9"  fill="#e0a825"/>
+        <rect x="50"  y="18" width="18" height="5"  fill="#e0a825"/>
+        <rect x="132" y="18" width="18" height="5"  fill="#e0a825"/>
+        <rect x="92"  y="18" width="10" height="82" fill="#e0a825"/>
+        <rect x="82"  y="95" width="30" height="5"  fill="#e0a825"/>
+        <rect x="152" y="18" width="10" height="82" fill="#e0a825"/>
+        <rect x="144" y="18" width="26" height="5"  fill="#e0a825"/>
+        <rect x="144" y="95" width="26" height="5"  fill="#e0a825"/>
+        <path d="M162 23 L198 23 Q230 23 230 52.5 Q230 82 198 82 L162 82 Z" fill="#e0a825"/>
+        <path d="M168 32 L196 32 Q220 32 220 52.5 Q220 73 196 73 L168 73 Z" fill="#0f1117"/>
+        <rect x="162" y="23" width="9" height="59" fill="#e0a825"/>
+        <rect x="20"  y="114" width="280" height="1" fill="#e0a825" opacity="0.4"/>
+        <text x="160" y="152" font-family="Georgia,'Times New Roman',serif" font-size="26" letter-spacing="8" fill="#e0a825" text-anchor="middle">TÚLIO PARCA</text>
+        <rect x="20"  y="164" width="280" height="1" fill="#e0a825" opacity="0.4"/>
+        <text x="160" y="187" font-family="Georgia,'Times New Roman',serif" font-size="13" letter-spacing="10" fill="#a87a10" text-anchor="middle">ADVOGADOS</text>
+      </svg>
+    </div>
+
+    <nav id="sidebar-nav"></nav>
+
+    <div class="side-foot">
+      <div>
+        <div class="side-user-name" id="s-nome">—</div>
+        <div class="side-user-role" id="s-role">—</div>
+      </div>
+      <button class="btn-exit" onclick="sair()" title="Sair">↩</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main>
+    <div class="topbar">
+      <div class="tb-left">
+        <div class="tb-title" id="tb-title">Hub de Rotinas</div>
+        <div class="tb-sub"  id="tb-sub"></div>
+      </div>
+      <div class="tb-clock" id="tb-clock">--:--</div>
+    </div>
+    <div class="content">
+
+      <!-- ── GESTÃO DE EQUIPE UNIFICADA (sócios) ───────── -->
+      <div class="tp" id="tp-gestao">
+
+        <!-- Seção: Acesso ao Sistema -->
+        <div class="card">
+          <div class="card-hdr">
+            <div class="card-title">Acessos ao Sistema</div>
+            <button class="btn btn-gold btn-sm" onclick="openModal(null)">+ Adicionar Membro</button>
+          </div>
+          <div id="a-err" class="alert"></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr>
+                <th>Nome</th><th>E-mail</th><th>Função</th><th>Cargo</th><th>Área</th><th>Acesso</th><th></th>
+              </tr></thead>
+              <tbody id="tbody-equipe"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Seção: Perfis de Colaboradores -->
+        <div class="card">
+          <div class="card-hdr">
+            <div class="card-title">Perfis dos Colaboradores</div>
+            <span class="chip" id="total-chip">0</span>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Colaborador</th><th>Cargo</th><th>Área</th><th>E-mail</th><th>Admissão</th><th></th></tr></thead>
+              <tbody id="tbody-cad"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── INDIVIDUAL ───────────────────────────────── -->
+      <div class="tp" id="tp-ind">
+        <div class="sel-bar">
+          <label>Colaborador</label>
+          <select id="sel-ind" onchange="renderInd()"><option value="">— Selecione —</option></select>
+        </div>
+        <div id="ind-content">
+          <div class="empty"><div class="empty-ico">📋</div><p>Selecione um colaborador</p></div>
+        </div>
+      </div>
+
+      <!-- ── VISÃO GERAL ──────────────────────────────── -->
+      <div class="tp" id="tp-geral">
+        <div class="stats-row">
+          <div class="stat"><div class="stat-lbl">Total</div><div class="stat-val" id="st-tot">0</div><div class="stat-sub">colaboradores</div></div>
+          <div class="stat g"><div class="stat-lbl">Alta Performance</div><div class="stat-val" id="st-alt">0</div><div class="stat-sub">≥ 75% hoje</div></div>
+          <div class="stat b"><div class="stat-lbl">Em Progresso</div><div class="stat-val" id="st-med">0</div><div class="stat-sub">25% – 74%</div></div>
+          <div class="stat r"><div class="stat-lbl">Atenção</div><div class="stat-val" id="st-bx">0</div><div class="stat-sub">abaixo de 25%</div></div>
+        </div>
+        <div class="ptabs">
+          <div class="ptab active" onclick="showPeriod('diario',this)">Diário</div>
+          <div class="ptab" onclick="showPeriod('semanal',this)">Semanal</div>
+          <div class="ptab" onclick="showPeriod('mensal',this)">Mensal</div>
+        </div>
+        <div class="pp active" id="pp-diario"><div class="gg" id="gg-diario"></div></div>
+        <div class="pp" id="pp-semanal"><div class="gg" id="gg-semanal"></div></div>
+        <div class="pp" id="pp-mensal"><div class="gg"  id="gg-mensal"></div></div>
+      </div>
+
+      <!-- ── MINHA ÁREA ───────────────────────────────── -->
+      <div class="tp" id="tp-ma">
+        <div id="ma-content">
+          <div class="empty"><div class="empty-ico">🔒</div><p>Carregando...</p></div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </main>
+</div><!-- /app -->
+
+<script>
+/* ══════════════════════════════════════════════
+   STORAGE KEYS
+══════════════════════════════════════════════ */
+const K_USERS  = 'tp_users_v1';
+const K_COLABS = 'tp_colabs_v1';
+
+function loadUsers(){  try{ return JSON.parse(localStorage.getItem(K_USERS)) ||[]; }catch(e){ return []; } }
+function saveUsers(u){ localStorage.setItem(K_USERS,  JSON.stringify(u)); }
+function loadColabs(){ try{ return JSON.parse(localStorage.getItem(K_COLABS))||[]; }catch(e){ return []; } }
+function saveColabs(c){ localStorage.setItem(K_COLABS, JSON.stringify(c)); }
+
+let users  = loadUsers();
+let colabs = loadColabs();
+let sess   = null; // {userId, nome, funcao:'socio'|'colaborador', colabId}
+
+/* ══════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════ */
+const ini   = n => n.split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('');
+const fmtDt = d => d ? d.split('-').reverse().join('/') : '—';
+const todayK= () => new Date().toISOString().split('T')[0];
+const weekK = () => { const d=new Date(),dy=d.getDay(),m=new Date(d); m.setDate(d.getDate()-(dy===0?6:dy-1)); return m.toISOString().split('T')[0]; };
+const monthK= () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; };
+const uid   = () => Math.random().toString(36).slice(2)+Date.now().toString(36);
+const h     = s => btoa(s+':tp_salt_2025'); // ofuscação simples
+
+function cargoClass(c){ return ['Sócio(a)','Advogado(a) Associado(a)','Estagiário(a) de Direito'].includes(c)?'adv':'adm'; }
+
+/* ── CHECKLIST STORAGE (legado — não mais usado, mantido para compat) ── */
+function ckKey(id,p){ const k=p==='diario'?todayK():p==='semanal'?weekK():monthK(); return `ck_${id}_${p}_${k}`; }
+function getCk(id,p){ try{ return JSON.parse(localStorage.getItem(ckKey(id,p)))||[]; }catch(e){ return []; } }
+function setCk(id,p,a){ localStorage.setItem(ckKey(id,p),JSON.stringify(a)); }
+function getProgress(id,p){
+  const c=colabs.find(x=>x.id===id); if(!c) return {done:0,total:0,pct:0};
+  const raw=(c.checklists||{})[p]||[];
+  const tasks=raw.map(normTask);
+  const done=tasks.filter(t=>isTaskDone(id,t.id,taskBucketKey(t))).length;
+  return {done,total:tasks.length,pct:tasks.length>0?Math.round(done/tasks.length*100):0};
+}
+
+/* ══════════════════════════════════════════════
+   RELÓGIO
+══════════════════════════════════════════════ */
+setInterval(()=>{
+  const el=document.getElementById('tb-clock');
+  if(el) el.textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+},1000);
+
+/* ══════════════════════════════════════════════
+   AUTH
+══════════════════════════════════════════════ */
+function switchAuth(mode){
+  document.querySelectorAll('.auth-toggle-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.auth-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tog-'+mode).classList.add('active');
+  document.getElementById('apanel-'+mode).classList.add('active');
+  document.getElementById('l-err').textContent='';
+  document.getElementById('c-err').textContent='';
+}
+
+function login(){
+  const email = document.getElementById('l-email').value.trim().toLowerCase();
+  const senha = document.getElementById('l-senha').value;
+  const err   = document.getElementById('l-err');
+  err.textContent='';
+  if(!email||!senha){ err.textContent='Preencha todos os campos.'; return; }
+  const u = users.find(x=>x.email===email && x.senha===h(senha));
+  if(!u){ err.textContent='E-mail ou senha incorretos.'; return; }
+  if(!u.ativo){ err.textContent='Conta pendente de aprovação.'; return; }
+  sess={ userId:u.id, nome:u.nome, funcao:u.funcao, colabId:u.colabId||null };
+  iniciarApp();
+}
+
+function cadastrar(){
+  const nome   = document.getElementById('c-nome').value.trim();
+  const email  = document.getElementById('c-email').value.trim().toLowerCase();
+  const senha  = document.getElementById('c-senha').value;
+  const funcao = document.getElementById('c-funcao').value;
+  const err    = document.getElementById('c-err');
+  const ok     = document.getElementById('c-ok');
+  err.textContent=''; ok.style.display='none';
+
+  if(!nome||!email||!senha||!funcao){ err.textContent='Preencha todos os campos.'; return; }
+  if(senha.length<6){ err.textContent='Senha deve ter ao menos 6 caracteres.'; return; }
+  if(users.find(x=>x.email===email)){ err.textContent='Este e-mail já está cadastrado.'; return; }
+
+  // Regra de bootstrap: se não há nenhum sócio ativo, o primeiro sócio é aprovado automaticamente.
+  // A partir do segundo, fica pendente de aprovação por um sócio existente.
+  const hasSocioAtivo = users.some(x => x.funcao === 'socio' && x.ativo);
+  const ativo = funcao === 'colaborador' || !hasSocioAtivo;
+
+  // Se for colaborador, cria entrada em colabs
+  let colabId = null;
+  if(funcao==='colaborador'){
+    colabId = uid();
+    const novo = {
+      id:colabId, nome, email, cargo:'', area:'', telefone:'', admissao:'', obs:'',
+      checklists:{diario:[],semanal:[],mensal:[]}
+    };
+    colabs.push(novo); saveColabs(colabs);
+  }
+
+  users.push({ id:uid(), nome, email, senha:h(senha), funcao, colabId, ativo });
+  saveUsers(users);
+
+  ok.textContent = (funcao==='socio' && hasSocioAtivo)
+    ? 'Cadastro enviado! Aguarde aprovação de um sócio.'
+    : 'Conta criada! Faça login agora.';
+  ok.style.display='block';
+  document.getElementById('c-nome').value='';
+  document.getElementById('c-email').value='';
+  document.getElementById('c-senha').value='';
+  document.getElementById('c-funcao').value='';
+}
+
+function sair(){
+  sess=null;
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('l-email').value='';
+  document.getElementById('l-senha').value='';
+}
+
+/* ══════════════════════════════════════════════
+   NAV
+══════════════════════════════════════════════ */
+const tabMeta={
+  'gestao': ['Gestão de Equipe',         'Acessos e perfis dos membros'],
+  'geral':  ['Visão Geral',              'Performance diária, semanal e mensal'],
+  'ind':    ['Acompanhamento Individual','Checklists por colaborador'],
+  'ma':     ['Minha Área',               'Seus checklists e progresso'],
+};
+
+function buildNav(){
+  const nav=document.getElementById('sidebar-nav');
+  if(sess.funcao==='socio'){
+    nav.innerHTML=`
+      <div class="nav-group-label">Operacional</div>
+      <a onclick="showTab('geral')"  id="nav-geral"><div class="ni">📊</div><span>Visão Geral</span></a>
+      <a onclick="showTab('ind')"    id="nav-ind"><div class="ni">📋</div><span>Individual</span></a>
+      <div class="nav-group-label">Administração</div>
+      <a onclick="showTab('gestao')" id="nav-gestao"><div class="ni">👥</div><span>Gestão de Equipe</span></a>`;
+  } else {
+    nav.innerHTML=`
+      <div class="nav-group-label">Meu Espaço</div>
+      <a onclick="showTab('ma')" id="nav-ma"><div class="ni">✅</div><span>Minha Área</span></a>`;
+  }
+}
+
+function showTab(name){
+  document.querySelectorAll('.tp').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav a').forEach(a=>a.classList.remove('active'));
+  document.getElementById('tp-'+name).classList.add('active');
+  const nel=document.getElementById('nav-'+name); if(nel) nel.classList.add('active');
+  const [t,s]=tabMeta[name]||['',''];
+  document.getElementById('tb-title').textContent=t;
+  document.getElementById('tb-sub').textContent=s;
+  if(name==='gestao'){ renderEquipe(); renderTabelaCad(); }
+  // tp-cad removido — unificado em tp-gestao
+  if(name==='ind')    populateSel('sel-ind');
+  if(name==='geral')  renderGeral();
+  if(name==='ma')     renderMA();
+}
+
+function iniciarApp(){
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('s-nome').textContent=sess.nome;
+  document.getElementById('s-role').textContent=sess.funcao==='socio'?'Sócio(a)':'Colaborador(a)';
+  buildNav();
+  if(sess.funcao==='socio') showTab('geral');
+  else showTab('ma');
+}
+
+/* ══════════════════════════════════════════════
+   GESTÃO DE EQUIPE
+══════════════════════════════════════════════ */
+function renderEquipe(){
+  const tb=document.getElementById('tbody-equipe'); if(!tb) return;
+  users=[...loadUsers()]; // reload fresh
+  if(users.length===0){
+    tb.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-ico">👤</div><p>Nenhum usuário cadastrado</p></div></td></tr>`;
+    return;
+  }
+  tb.innerHTML=users.map(u=>{
+    const c=colabs.find(x=>x.id===u.colabId);
+    const statusBadge=u.ativo
+      ?`<span class="badge b-colab">Ativo</span>`
+      :`<span class="badge" style="background:var(--or-bg);color:var(--or);border-color:rgba(176,107,46,.2)">Pendente</span>`;
+    return `<tr>
+      <td><div class="td-name">${u.nome}</div></td>
+      <td style="font-size:11px;color:var(--mist)">${u.email}</td>
+      <td><span class="badge ${u.funcao==='socio'?'b-socio':'b-colab'}">${u.funcao==='socio'?'Sócio':'Colaborador'}</span></td>
+      <td style="font-size:11px;color:var(--mist)">${c?.cargo||'—'}</td>
+      <td style="font-size:11px;color:var(--mist)">${c?.area||'—'}</td>
+      <td>${statusBadge}${!u.ativo?`<button class="btn btn-sm btn-blue" style="margin-left:6px" onclick="aprovarUser('${u.id}')">Aprovar</button>`:''}</td>
+      <td>
+        <div style="display:flex;gap:5px">
+          <button class="btn btn-sm btn-ghost" onclick="openModal('${u.id}')">Editar</button>
+          <button class="btn btn-sm btn-red"   onclick="removerUser('${u.id}')">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function aprovarUser(id){
+  const u=users.find(x=>x.id===id); if(!u) return;
+  u.ativo=true; saveUsers(users); renderEquipe();
+}
+
+function removerUser(id){
+  const u=users.find(x=>x.id===id); if(!u) return;
+  if(!confirm(`Remover o acesso de ${u.nome}?`)) return;
+  users=users.filter(x=>x.id!==id); saveUsers(users);
+  // remove colab vinculado
+  if(u.colabId){ colabs=colabs.filter(x=>x.id!==u.colabId); saveColabs(colabs); }
+  renderEquipe(); renderTabelaCad();
+}
+
+/* MODAL */
+function openModal(userId){
+  const modal=document.getElementById('modal-user');
+  const isNew=!userId;
+  document.getElementById('modal-title').textContent=isNew?'Adicionar Usuário':'Editar Usuário';
+  document.getElementById('m-id').value=userId||'';
+  document.getElementById('m-err').className='alert';
+
+  if(!isNew){
+    const u=users.find(x=>x.id===userId); if(!u) return;
+    document.getElementById('m-nome').value=u.nome||'';
+    document.getElementById('m-email').value=u.email||'';
+    document.getElementById('m-funcao').value=u.funcao||'colaborador';
+    const c=colabs.find(x=>x.id===u.colabId)||{};
+    document.getElementById('m-cargo').value=c.cargo||'';
+    document.getElementById('m-area').value=c.area||'';
+    document.getElementById('m-tel').value=c.telefone||'';
+    document.getElementById('m-adm').value=c.admissao||'';
+    document.getElementById('m-obs').value=c.obs||'';
+  } else {
+    ['m-nome','m-email','m-cargo','m-tel','m-adm','m-obs'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('m-funcao').value='colaborador';
+    document.getElementById('m-area').value='';
+  }
+  modal.classList.add('open');
+}
+function closeModal(){ document.getElementById('modal-user').classList.remove('open'); }
+
+function salvarModal(){
+  const userId  = document.getElementById('m-id').value;
+  const nome    = document.getElementById('m-nome').value.trim();
+  const email   = document.getElementById('m-email').value.trim().toLowerCase();
+  const funcao  = document.getElementById('m-funcao').value;
+  const cargo   = document.getElementById('m-cargo').value;
+  const area    = document.getElementById('m-area').value;
+  const tel     = document.getElementById('m-tel').value.trim();
+  const adm     = document.getElementById('m-adm').value;
+  const obs     = document.getElementById('m-obs').value.trim();
+  const errEl   = document.getElementById('m-err');
+
+  if(!nome||!email||!funcao){ errEl.className='alert err'; errEl.textContent='Preencha nome, e-mail e função.'; return; }
+
+  if(userId){
+    // EDITAR
+    const u=users.find(x=>x.id===userId); if(!u) return;
+    const dupE=users.find(x=>x.email===email && x.id!==userId);
+    if(dupE){ errEl.className='alert err'; errEl.textContent='E-mail já usado por outro usuário.'; return; }
+    u.nome=nome; u.email=email; u.funcao=funcao;
+    // sync / create colab
+    if(funcao==='colaborador'){
+      if(!u.colabId){ u.colabId=uid(); colabs.push({id:u.colabId,nome,email,cargo,area,telefone:tel,admissao:adm,obs,checklists:{diario:[],semanal:[],mensal:[]}}); }
+      else{ const c=colabs.find(x=>x.id===u.colabId); if(c){ c.nome=nome;c.email=email;c.cargo=cargo;c.area=area;c.telefone=tel;c.admissao=adm;c.obs=obs; } }
+    }
+    saveUsers(users); saveColabs(colabs);
+  } else {
+    // ADICIONAR
+    if(users.find(x=>x.email===email)){ errEl.className='alert err'; errEl.textContent='E-mail já cadastrado.'; return; }
+    let colabId=null;
+    if(funcao==='colaborador'){
+      colabId=uid();
+      colabs.push({id:colabId,nome,email,cargo,area,telefone:tel,admissao:adm,obs,checklists:{diario:[],semanal:[],mensal:[]}});
+      saveColabs(colabs);
+    }
+    users.push({id:uid(),nome,email,senha:h('tulio@2025'), // senha padrão inicial
+      funcao,colabId,ativo:true});
+    saveUsers(users);
+  }
+
+  closeModal(); renderEquipe(); renderTabelaCad();
+}
+
+/* ══════════════════════════════════════════════
+   CADASTRO
+══════════════════════════════════════════════ */
+// salvarColab: substituído pelo modal unificado (openModal/salvarModal)
+
+function excluirColab(id){
+  const c=colabs.find(x=>x.id===id);
+  if(!c||!confirm(`Remover ${c.nome}?`)) return;
+  colabs=colabs.filter(x=>x.id!==id); saveColabs(colabs); renderTabelaCad();
+}
+
+function renderTabelaCad(){
+  const tb=document.getElementById('tbody-cad'); if(!tb) return;
+  document.getElementById('total-chip').textContent=colabs.length;
+  if(colabs.length===0){ tb.innerHTML=`<tr><td colspan="6"><div class="empty"><div class="empty-ico">👤</div><p>Nenhum colaborador</p></div></td></tr>`; return; }
+  tb.innerHTML=colabs.map(c=>`<tr>
+    <td><div class="td-name">${c.nome}</div>${c.telefone?`<div class="td-dim">${c.telefone}</div>`:''}</td>
+    <td><span class="badge b-${cargoClass(c.cargo)}">${c.cargo||'—'}</span></td>
+    <td style="font-size:11px;color:var(--mist)">${c.area||'—'}</td>
+    <td style="font-size:11px;color:var(--mist)">${c.email||'—'}</td>
+    <td style="font-size:11px;color:var(--mist)">${fmtDt(c.admissao)}</td>
+    <td><div style="display:flex;gap:5px">
+      <button class="btn btn-sm btn-ghost" onclick="irInd('${c.id}')">Ver</button>
+      <button class="btn btn-sm btn-red"   onclick="excluirColab('${c.id}')">✕</button>
+    </div></td>
+  </tr>`).join('');
+}
+function irInd(id){ showTab('ind'); const s=document.getElementById('sel-ind'); s.value=id; renderInd(); }
+function showAlert(id,msg,cls){ const el=document.getElementById(id); if(!el) return; el.className='alert '+cls; el.textContent=msg; setTimeout(()=>el.className='alert',3500); }
+
+/* ══════════════════════════════════════════════
+   INDIVIDUAL
+══════════════════════════════════════════════ */
+function populateSel(selId){
+  const s=document.getElementById(selId); if(!s) return; const prev=s.value;
+  s.innerHTML='<option value="">— Selecione —</option>';
+  colabs.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.textContent=c.nome; s.appendChild(o); });
+  if(prev) s.value=prev;
+}
+
+let ckP='diario';
+
+function renderInd(){
+  const id=document.getElementById('sel-ind').value;
+  const el=document.getElementById('ind-content');
+  if(!id){ el.innerHTML=`<div class="empty"><div class="empty-ico">📋</div><p>Selecione um colaborador</p></div>`; return; }
+  const c=colabs.find(x=>x.id===id); if(!c) return;
+  el.innerHTML=buildColabView(c,ckP,'mgr');
+}
+
+function buildColabView(c,period,mode){
+  const PS=['diario','semanal','mensal'], PL={diario:'Diário',semanal:'Semanal',mensal:'Mensal'};
+  const tags={diario:'tag-d',semanal:'tag-s',mensal:'tag-m'};
+
+  const progBars=PS.map(p=>{
+    const {done,total,pct}=getProgress(c.id,p);
+    const cls=pct>=75?'':pct>=25?'mid':'low';
+    return `<div class="pm-item">
+      <div class="pm-lbl"><span>${PL[p]}</span><span>${done}/${total} · ${pct}%</span></div>
+      <div class="pg-wrap"><div class="pg-bar ${cls}" style="width:${pct||0}%"></div></div>
+    </div>`;
+  }).join('');
+
+  const hdr=`<div class="colab-hdr">
+    <div class="avatar">${ini(c.nome)}</div>
+    <div><div class="ci-name">${c.nome}</div>
+    <div class="ci-role">${c.cargo||''}${c.area?' · '+c.area:''}</div>
+    ${c.email?`<div style="font-size:10px;color:var(--mist2);margin-top:1px">${c.email}</div>`:''}</div>
+    <div class="ci-meta"><div class="ci-ml">Admissão</div><div class="ci-mv">${fmtDt(c.admissao)}</div></div>
+  </div>`;
+
+  const obs=c.obs?`<div class="obs-box"><strong>📌</strong>${c.obs}</div>`:'';
+
+  const tabs=PS.map(p=>`<div class="cktab${period===p?' active':''}" onclick="switchCk('${c.id}','${p}','${mode}')">${PL[p]}</div>`).join('');
+  const panels=PS.map(p=>buildCkPanel(c,p,period)).join('');
+
+  const progCard=`<div class="card">
+    <div class="card-hdr"><div class="card-title">Progresso</div></div>
+    <div class="pm-row">${progBars}</div>
+  </div>`;
+
+  const ckCard=`<div class="card">
+    <div class="card-hdr">
+      <div class="card-title">Checklists</div>
+      <span class="tag ${tags[period]}">${PL[period]}</span>
+    </div>
+    <div class="cktabs">${tabs}</div>${panels}
+  </div>`;
+
+  return hdr+obs+progCard+ckCard;
+}
+
+/* ══════════════════════════════════════════════
+   TASK HELPERS — objetos com frequência
+   Cada task: { id, texto, frequencia, intervaloDias }
+   Frequência: 'diaria' | 'quinzenal' | 'personalizado'
+   Backward compat: strings antigas tratadas como 'diaria'
+══════════════════════════════════════════════ */
+function normTask(t){
+  if(typeof t==='string') return {id:uid(),texto:t,frequencia:'diaria',intervaloDias:null,dataInicio:null,dataFim:null};
+  return Object.assign({intervaloDias:null,dataInicio:null,dataFim:null},t);
+}
+
+const EPOCH = new Date('2020-01-01').getTime();
+function daysSinceEpoch(){ return Math.floor((Date.now()-EPOCH)/86400000); }
+
+function taskBucketKey(task){
+  const f=task.frequencia||'diaria';
+  if(f==='diaria')      return 'D'+todayK();
+  if(f==='semanal')     return 'S'+weekK();
+  if(f==='quinzenal')   return 'Q'+Math.floor(daysSinceEpoch()/15);
+  if(f==='mensal')      return 'M'+monthK();
+  const n=parseInt(task.intervaloDias)||7;
+  if(task.dataInicio){
+    const origin=Math.floor((new Date(task.dataInicio).getTime()-EPOCH)/86400000);
+    return 'C'+Math.floor((daysSinceEpoch()-origin)/n);
+  }
+  return 'C'+Math.floor(daysSinceEpoch()/n);
+}
+
+function isTaskDone(colabId,taskId,bucket){
+  return localStorage.getItem(`ck3_${colabId}_${taskId}_${bucket}`)===`1`;
+}
+function setTaskDone(colabId,taskId,bucket,done){
+  const k=`ck3_${colabId}_${taskId}_${bucket}`;
+  if(done) localStorage.setItem(k,'1'); else localStorage.removeItem(k);
+}
+
+/* frequência → label + classe */
+function freqInfo(f,dias){
+  if(f==='semanal')       return {label:'Semanal',   cls:'freq-s'};
+  if(f==='quinzenal')     return {label:'Quinzenal', cls:'freq-q'};
+  if(f==='mensal')        return {label:'Mensal',    cls:'freq-m'};
+  if(f==='personalizado'){
+    const task=dias; // reuse param as full task object when called with task
+    if(task&&typeof task==='object'&&task.dataInicio&&task.dataFim){
+      const fmt=d=>d.split('-').reverse().join('/');
+      return {label:`${fmt(task.dataInicio)}→${fmt(task.dataFim)}`,cls:'freq-p'};
+    }
+    return {label:'Personalizado',cls:'freq-p'};
+  }
+  return {label:'Diária', cls:'freq-d'};
+}
+
+function buildCkPanel(c,period,active){
+  const raw=(c.checklists||{})[period]||[];
+  const tasks=raw.map(normTask);
+  const cid=c.id;
+
+  const items=tasks.map((t,i)=>{
+    const bucket=taskBucketKey(t);
+    const done=isTaskDone(cid,t.id,bucket);
+    const fi=freqInfo(t.frequencia,t);
+    return `<div class="cki${done?' done':''}" id="cki-${cid}-${period}-${i}">
+      <input type="checkbox" id="ckc-${cid}-${period}-${i}" ${done?'checked':''}
+        onchange="toggleCk('${cid}','${period}',${i})">
+      <label class="cki-lbl" for="ckc-${cid}-${period}-${i}">${t.texto}</label>
+      <span class="freq-badge ${fi.cls}">${fi.label}</span>
+      <div class="ck-actions">
+        <button class="ck-btn edit" title="Editar" onclick="startEditTask('${cid}','${period}',${i})">✏️</button>
+        <button class="ck-btn del"  title="Remover" onclick="delTask('${cid}','${period}',${i})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const addId=`add-${cid}-${period}`;
+  return `<div class="ckp${period===active?' active':''}" id="ckp-${cid}-${period}">
+    ${tasks.length===0?`<div class="empty" style="padding:18px"><div class="empty-ico">✅</div><p>Nenhuma tarefa. Adicione abaixo.</p></div>`:items}
+    <div class="add-task-wrap" id="${addId}">
+      <div class="add-task-label">Nova Tarefa</div>
+      <div class="add-task-fields">
+        <input type="text" id="nt-txt-${cid}-${period}" placeholder="Descrição da tarefa..."
+          onkeydown="if(event.key==='Enter'){addTask('${cid}','${period}');event.preventDefault()}">
+        <select id="nt-freq-${cid}-${period}" onchange="toggleDateRange('${cid}','${period}')">
+          <option value="diaria">Diária</option>
+          <option value="semanal">Semanal (7d)</option>
+          <option value="quinzenal">Quinzenal (15d)</option>
+          <option value="mensal">Mensal (30d)</option>
+          <option value="personalizado">Personalizado</option>
+        </select>
+        <div class="daterange-wrap" id="dias-wrap-${cid}-${period}" style="display:none">
+          <label>De</label>
+          <input type="date" id="nt-dt-ini-${cid}-${period}">
+          <span class="daterange-sep">→</span>
+          <label>Até</label>
+          <input type="date" id="nt-dt-fim-${cid}-${period}">
+        </div>
+        <button class="btn btn-gold btn-sm" onclick="addTask('${cid}','${period}')">+ Adicionar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleDateRange(cid,period){
+  const sel=document.getElementById(`nt-freq-${cid}-${period}`);
+  const wrap=document.getElementById(`dias-wrap-${cid}-${period}`);
+  if(wrap) wrap.style.display=sel&&sel.value==='personalizado'?'flex':'none';
+}
+
+function switchCk(id,p,mode){ ckP=p; if(mode==='mgr') renderInd(); else renderMA(); }
+
+function toggleCk(cid,period,idx){
+  const c=colabs.find(x=>x.id===cid); if(!c) return;
+  const raw=(c.checklists||{})[period]||[];
+  const task=normTask(raw[idx]); if(!task) return;
+  const bucket=taskBucketKey(task);
+  const wasDone=isTaskDone(cid,task.id,bucket);
+  setTaskDone(cid,task.id,bucket,!wasDone);
+  const inInd=document.getElementById('tp-ind').classList.contains('active');
+  const inMA =document.getElementById('tp-ma').classList.contains('active');
+  if(inInd) renderInd(); if(inMA) renderMA();
+}
+
+function addTask(cid,period){
+  const txtEl=document.getElementById(`nt-txt-${cid}-${period}`);
+  const freqEl=document.getElementById(`nt-freq-${cid}-${period}`);
+  const texto=(txtEl?txtEl.value.trim():''); if(!texto) return;
+  const frequencia=freqEl?freqEl.value:'diaria';
+  let intervaloDias=null, dataInicio=null, dataFim=null;
+  if(frequencia==='personalizado'){
+    const iniEl=document.getElementById(`nt-dt-ini-${cid}-${period}`);
+    const fimEl=document.getElementById(`nt-dt-fim-${cid}-${period}`);
+    dataInicio=iniEl?iniEl.value:null;
+    dataFim=fimEl?fimEl.value:null;
+    if(dataInicio&&dataFim){
+      intervaloDias=Math.max(1,Math.round((new Date(dataFim)-new Date(dataInicio))/86400000));
+    } else { intervaloDias=7; }
+  }
+  const c=colabs.find(x=>x.id===cid); if(!c) return;
+  if(!c.checklists) c.checklists={diario:[],semanal:[],mensal:[]};
+  c.checklists[period].push({id:uid(),texto,frequencia,intervaloDias,dataInicio,dataFim});
+  saveColabs(colabs);
+  const inInd=document.getElementById('tp-ind').classList.contains('active');
+  const inMA =document.getElementById('tp-ma').classList.contains('active');
+  if(inInd) renderInd(); if(inMA) renderMA();
+}
+
+/* EDIÇÃO INLINE */
+function startEditTask(cid,period,idx){
+  const c=colabs.find(x=>x.id===cid); if(!c) return;
+  const task=normTask((c.checklists||{})[period]?.[idx]); if(!task) return;
+  const itemEl=document.getElementById(`cki-${cid}-${period}-${idx}`); if(!itemEl) return;
+  itemEl.innerHTML=`
+    <div class="cki-edit-form">
+      <input id="edit-txt-${cid}-${period}-${idx}" value="${task.texto.replace(/"/g,'&quot;')}" placeholder="Texto da tarefa">
+      <select id="edit-freq-${cid}-${period}-${idx}" onchange="toggleEditDateRange('${cid}','${period}',${idx})">
+        <option value="diaria"${task.frequencia==='diaria'?' selected':''}>Diária</option>
+        <option value="semanal"${task.frequencia==='semanal'?' selected':''}>Semanal (7d)</option>
+        <option value="quinzenal"${task.frequencia==='quinzenal'?' selected':''}>Quinzenal (15d)</option>
+        <option value="mensal"${task.frequencia==='mensal'?' selected':''}>Mensal (30d)</option>
+        <option value="personalizado"${task.frequencia==='personalizado'?' selected':''}>Personalizado</option>
+      </select>
+      <div class="daterange-wrap" id="edit-dias-wrap-${cid}-${period}-${idx}"
+        style="display:${task.frequencia==='personalizado'?'flex':'none'}">
+        <label>De</label>
+        <input type="date" id="edit-dt-ini-${cid}-${period}-${idx}" value="${task.dataInicio||''}">
+        <span class="daterange-sep">→</span>
+        <label>Até</label>
+        <input type="date" id="edit-dt-fim-${cid}-${period}-${idx}" value="${task.dataFim||''}">
+      </div>
+      <button class="cki-save"   onclick="saveEditTask('${cid}','${period}',${idx})">✓</button>
+      <button class="cki-cancel" onclick="cancelEditTask('${cid}','${period}')">✕</button>
+    </div>`;
+}
+
+function toggleEditDateRange(cid,period,idx){
+  const sel=document.getElementById(`edit-freq-${cid}-${period}-${idx}`);
+  const wrap=document.getElementById(`edit-dias-wrap-${cid}-${period}-${idx}`);
+  if(wrap) wrap.style.display=sel&&sel.value==='personalizado'?'flex':'none';
+}
+
+function saveEditTask(cid,period,idx){
+  const txtEl=document.getElementById(`edit-txt-${cid}-${period}-${idx}`);
+  const freqEl=document.getElementById(`edit-freq-${cid}-${period}-${idx}`);
+  const texto=txtEl?txtEl.value.trim():''; if(!texto) return;
+  const frequencia=freqEl?freqEl.value:'diaria';
+  let intervaloDias=null, dataInicio=null, dataFim=null;
+  if(frequencia==='personalizado'){
+    const iniEl=document.getElementById(`edit-dt-ini-${cid}-${period}-${idx}`);
+    const fimEl=document.getElementById(`edit-dt-fim-${cid}-${period}-${idx}`);
+    dataInicio=iniEl?iniEl.value:null;
+    dataFim=fimEl?fimEl.value:null;
+    if(dataInicio&&dataFim){
+      intervaloDias=Math.max(1,Math.round((new Date(dataFim)-new Date(dataInicio))/86400000));
+    } else { intervaloDias=7; }
+  }
+  const c=colabs.find(x=>x.id===cid); if(!c) return;
+  const old=normTask((c.checklists||{})[period]?.[idx]);
+  c.checklists[period][idx]={id:old.id,texto,frequencia,intervaloDias,dataInicio,dataFim};
+  saveColabs(colabs);
+  cancelEditTask(cid,period);
+}
+
+function cancelEditTask(cid,period){
+  const inInd=document.getElementById('tp-ind').classList.contains('active');
+  const inMA =document.getElementById('tp-ma').classList.contains('active');
+  if(inInd) renderInd(); if(inMA) renderMA();
+}
+
+function delTask(cid,period,idx){
+  const c=colabs.find(x=>x.id===cid); if(!c) return;
+  c.checklists[period].splice(idx,1);
+  saveColabs(colabs);
+  const inInd=document.getElementById('tp-ind').classList.contains('active');
+  const inMA =document.getElementById('tp-ma').classList.contains('active');
+  if(inInd) renderInd(); if(inMA) renderMA();
+}
+
+/* ══════════════════════════════════════════════
+   VISÃO GERAL
+══════════════════════════════════════════════ */
+function showPeriod(p,el){
+  document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.pp').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active'); document.getElementById('pp-'+p).classList.add('active');
+  renderGeralGrid(p);
+}
+function renderGeral(){
+  colabs=loadColabs();
+  const n=colabs.length;
+  document.getElementById('st-tot').textContent=n;
+  let a=0,m=0,b=0;
+  colabs.forEach(c=>{ const {pct}=getProgress(c.id,'diario'); if(pct>=75)a++; else if(pct>=25)m++; else b++; });
+  document.getElementById('st-alt').textContent=a;
+  document.getElementById('st-med').textContent=m;
+  document.getElementById('st-bx').textContent=b;
+  ['diario','semanal','mensal'].forEach(p=>renderGeralGrid(p));
+}
+function renderGeralGrid(p){
+  const grid=document.getElementById('gg-'+p); if(!grid) return;
+  const PL={diario:'Diário',semanal:'Semanal',mensal:'Mensal'};
+  if(colabs.length===0){ grid.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-ico">👥</div><p>Nenhum colaborador</p></div>`; return; }
+  grid.innerHTML=colabs.map(c=>{
+    const {done,total,pct}=getProgress(c.id,p);
+    const cls=pct>=75?'pg':pct>=25?'pm':'pr';
+    const barCls=pct>=75?'':pct>=25?'mid':'low';
+    const st=pct>=75?'✅ Em dia':pct>=25?'⏳ Progresso':total===0?'—':'⚠️ Atenção';
+    return `<div class="gc" onclick="irInd('${c.id}')">
+      <div class="gc-top">
+        <div class="avatar">${ini(c.nome)}</div>
+        <div><div class="gc-name">${c.nome}</div><div class="gc-role">${c.cargo||c.area||'—'}</div></div>
+        <div class="gc-pct ${cls}">${pct}%</div>
+      </div>
+      <div class="pg-wrap" style="margin-bottom:6px"><div class="pg-bar ${barCls}" style="width:${pct||0}%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--mist2)">
+        <span>${done}/${total} tarefas</span><span>${st}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════
+   MINHA ÁREA
+══════════════════════════════════════════════ */
+function renderMA(){
+  if(!sess||sess.funcao!=='colaborador') return;
+  colabs=loadColabs();
+  const el=document.getElementById('ma-content'); if(!el) return;
+  const c=colabs.find(x=>x.id===sess.colabId);
+  if(!c){
+    el.innerHTML=`<div class="empty"><div class="empty-ico">⚠️</div><p>Seu perfil ainda não foi configurado pelo gestor.<br>Entre em contato com o responsável.</p></div>`;
+    return;
+  }
+  const PS=['diario','semanal','mensal'], PL={diario:'Diário',semanal:'Semanal',mensal:'Mensal'};
+  const tags={diario:'tag-d',semanal:'tag-s',mensal:'tag-m'};
+
+  const progBars=PS.map(p=>{
+    const {done,total,pct}=getProgress(c.id,p);
+    const cls=pct>=75?'':pct>=25?'mid':'low';
+    return `<div class="pm-item">
+      <div class="pm-lbl"><span>${PL[p]}</span><span>${done}/${total} · ${pct}%</span></div>
+      <div class="pg-wrap"><div class="pg-bar ${cls}" style="width:${pct||0}%"></div></div>
+    </div>`;
+  }).join('');
+
+  const tabs=PS.map(p=>`<div class="cktab${ckP===p?' active':''}" onclick="switchCk('${c.id}','${p}','colab')">${PL[p]}</div>`).join('');
+  const panels=PS.map(p=>buildCkPanel(c,p,ckP)).join('');
+  const obs=c.obs?`<div class="obs-box"><strong>📌</strong>${c.obs}</div>`:'';
+
+  el.innerHTML=`
+    <div class="ma-hdr">
+      <div class="ma-top">
+        <div class="avatar" style="width:48px;height:48px;font-size:17px">${ini(c.nome)}</div>
+        <div><div class="ma-name">${c.nome}</div><div class="ma-role">${c.cargo||'Colaborador'}${c.area?' · '+c.area:''}</div></div>
+      </div>
+      <div class="pm-row" style="margin-top:16px">${progBars}</div>
+    </div>
+    ${obs}
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">Meus Checklists</div>
+        <span class="tag ${tags[ckP]}">${PL[ckP]}</span>
+      </div>
+      <div class="cktabs">${tabs}</div>${panels}
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
+document.getElementById('auth-screen').style.display='flex';
+document.getElementById('app').style.display='none';
+</script>
+</body>
+</html>
