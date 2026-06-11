@@ -986,28 +986,48 @@ function renderEquipe(){
     const c=colabs.find(x=>x.id===u.colab_id);
     const statusBadge=u.ativo
       ?`<span class="badge b-colab">Ativo</span>`
-      :`<span class="badge" style="background:var(--or-bg);color:var(--or);border-color:rgba(176,107,46,.2)">Pendente</span>`;
+      :`<span class="badge" style="background:var(--or-bg);color:var(--or);border-color:rgba(176,107,46,.2)">Solicitação</span>`;
+    const acoes=u.ativo
+      ?`<button class="btn btn-sm btn-ghost" onclick="openModal('${u.id}')">Editar</button>
+        <button class="btn btn-sm btn-red"   onclick="removerUser('${u.id}')">✕</button>`
+      :`<button class="btn btn-sm btn-blue" onclick="aprovarUser('${u.id}')">Aceitar</button>
+        <button class="btn btn-sm btn-red"  onclick="recusarUser('${u.id}')">Recusar</button>`;
     return `<tr>
       <td><div class="td-name">${u.nome}</div></td>
-      <td style="font-size:11px;color:var(--mist)">${c?.email||'—'}</td>
+      <td style="font-size:11px;color:var(--mist)">${u.email||c?.email||'—'}</td>
       <td><span class="badge ${u.funcao==='socio'?'b-socio':'b-colab'}">${u.funcao==='socio'?'Sócio':'Colaborador'}</span></td>
       <td style="font-size:11px;color:var(--mist)">${c?.cargo||'—'}</td>
       <td style="font-size:11px;color:var(--mist)">${c?.area||'—'}</td>
-      <td>${statusBadge}${!u.ativo?`<button class="btn btn-sm btn-blue" style="margin-left:6px" onclick="aprovarUser('${u.id}')">Aprovar</button>`:''}</td>
-      <td>
-        <div style="display:flex;gap:5px">
-          <button class="btn btn-sm btn-ghost" onclick="openModal('${u.id}')">Editar</button>
-          <button class="btn btn-sm btn-red"   onclick="removerUser('${u.id}')">✕</button>
-        </div>
-      </td>
+      <td>${statusBadge}</td>
+      <td><div style="display:flex;gap:5px">${acoes}</div></td>
     </tr>`;
   }).join('');
 }
 
 async function aprovarUser(id){
-  const { error } = await sb.from('profiles').update({ ativo:true }).eq('id', id);
-  if(error){ alert('Erro ao aprovar: '+error.message); return; }
-  await carregarTudo(); renderEquipe();
+  const u=profiles.find(x=>x.id===id); if(!u) return;
+  // Colaborador entra na base SÓ agora (ao ser aceito): cria o registro e vincula.
+  if(u.funcao==='colaborador' && !u.colab_id){
+    const { data: novo, error } = await sb.from('colaboradores')
+      .insert({ nome:u.nome, email:u.email }).select().single();
+    if(error){ alert('Erro ao aceitar: '+error.message); return; }
+    await sb.from('profiles').update({ ativo:true, colab_id:novo.id }).eq('id', id);
+  } else {
+    // Sócio (ou já vinculado): apenas ativa.
+    const { error } = await sb.from('profiles').update({ ativo:true }).eq('id', id);
+    if(error){ alert('Erro ao aceitar: '+error.message); return; }
+  }
+  await carregarTudo(); renderEquipe(); renderTabelaCad();
+}
+
+async function recusarUser(id){
+  const u=profiles.find(x=>x.id===id); if(!u) return;
+  if(!confirm(`Recusar e remover a solicitação de ${u.nome}?`)) return;
+  // Solicitação pendente ainda não tem colaborador; remove o perfil.
+  if(u.colab_id) await sb.from('colaboradores').delete().eq('id', u.colab_id);
+  const { error } = await sb.from('profiles').delete().eq('id', id);
+  if(error){ alert('Erro ao recusar: '+error.message); return; }
+  await carregarTudo(); renderEquipe(); renderTabelaCad();
 }
 
 async function removerUser(id){
@@ -1033,7 +1053,7 @@ function openModal(userId){
     const u=profiles.find(x=>x.id===userId); if(!u) return;
     const c=colabs.find(x=>x.id===u.colab_id)||{};
     document.getElementById('m-nome').value=u.nome||'';
-    document.getElementById('m-email').value=c.email||'';
+    document.getElementById('m-email').value=c.email||u.email||'';
     document.getElementById('m-funcao').value=u.funcao||'colaborador';
     document.getElementById('m-cargo').value=c.cargo||'';
     document.getElementById('m-area').value=c.area||'';

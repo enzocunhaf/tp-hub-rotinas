@@ -9,11 +9,15 @@
 CREATE TABLE IF NOT EXISTS profiles (
   id         UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   nome       TEXT NOT NULL,
+  email      TEXT,
   funcao     TEXT NOT NULL DEFAULT 'colaborador',  -- 'socio' | 'colaborador'
   ativo      BOOLEAN NOT NULL DEFAULT FALSE,
-  colab_id   UUID,
+  colab_id   UUID,                                  -- preenchido só ao APROVAR
   criado_em  TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Caso a tabela já exista de uma versão anterior, garante a coluna de e-mail:
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS email TEXT;
 
 -- ─── 2. COLABORADORES ────────────────────────────────────
 CREATE TABLE IF NOT EXISTS colaboradores (
@@ -82,8 +86,9 @@ AS $$
 $$;
 
 -- ═══════════════════════════════════════════════════════════
--- TRIGGER: ao cadastrar usuário, cria o profile e (se for
--- colaborador) já cria o registro em colaboradores e vincula.
+-- TRIGGER: ao cadastrar usuário, cria APENAS o profile (a
+-- solicitação). O registro em "colaboradores" só é criado
+-- quando o sócio APROVAR — feito pelo app.
 -- ═══════════════════════════════════════════════════════════
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
@@ -96,7 +101,6 @@ DECLARE
   v_nome      TEXT;
   v_ativo     BOOLEAN;
   v_has_socio BOOLEAN;
-  v_colab_id  UUID := NULL;
 BEGIN
   v_funcao := COALESCE(NEW.raw_user_meta_data->>'funcao', 'colaborador');
   v_nome   := COALESCE(NEW.raw_user_meta_data->>'nome', split_part(NEW.email, '@', 1));
@@ -108,15 +112,9 @@ BEGIN
   -- Primeiro sócio é aprovado automaticamente; demais aguardam aprovação.
   v_ativo := (v_funcao = 'socio' AND NOT v_has_socio);
 
-  -- Colaborador já ganha um registro em colaboradores (com nome e e-mail).
-  IF v_funcao = 'colaborador' THEN
-    INSERT INTO public.colaboradores (nome, email)
-    VALUES (v_nome, NEW.email)
-    RETURNING id INTO v_colab_id;
-  END IF;
-
-  INSERT INTO public.profiles (id, nome, funcao, ativo, colab_id)
-  VALUES (NEW.id, v_nome, v_funcao, v_ativo, v_colab_id);
+  -- Cria só o perfil/solicitação (sem registro em colaboradores).
+  INSERT INTO public.profiles (id, nome, email, funcao, ativo, colab_id)
+  VALUES (NEW.id, v_nome, NEW.email, v_funcao, v_ativo, NULL);
 
   RETURN NEW;
 END;
