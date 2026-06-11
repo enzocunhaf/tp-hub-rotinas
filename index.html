@@ -875,6 +875,26 @@ async function iniciarSessao(errEl){
   iniciarApp();
 }
 
+/* Verifica se o DOMÍNIO do e-mail recebe mensagens (via DNS-over-HTTPS público).
+   Consulta MX; sem MX, tenta A. Fail-open: se a checagem falhar, libera o cadastro. */
+async function dominioRecebeEmail(dominio){
+  try{
+    const q = async (type)=>{
+      const r = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(dominio)}&type=${type}`);
+      if(!r.ok) throw new Error('dns http '+r.status);
+      return r.json();
+    };
+    const mx = await q('MX');
+    if(mx.Status === 3) return false;                              // NXDOMAIN: domínio não existe
+    if(Array.isArray(mx.Answer) && mx.Answer.length) return true;  // tem MX
+    const a = await q('A');                                        // fallback: recebe via A
+    return Array.isArray(a.Answer) && a.Answer.length > 0;
+  }catch(e){
+    console.warn('Checagem de domínio indisponível, liberando cadastro:', e.message);
+    return true; // fail-open
+  }
+}
+
 async function cadastrar(){
   const nome   = document.getElementById('c-nome').value.trim();
   const email  = document.getElementById('c-email').value.trim().toLowerCase();
@@ -886,7 +906,16 @@ async function cadastrar(){
 
   if(!sb){ err.textContent='Sistema não configurado (faltam as credenciais do Supabase).'; return; }
   if(!nome||!email||!senha||!funcao){ err.textContent='Preencha todos os campos.'; return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent='Digite um e-mail válido.'; return; }
   if(senha.length<6){ err.textContent='Senha deve ter ao menos 6 caracteres.'; return; }
+
+  // Checa se o domínio do e-mail realmente recebe mensagens (com feedback no botão).
+  const btn = document.querySelector('#apanel-cad .auth-submit');
+  const btnTxt = btn ? btn.textContent : '';
+  if(btn){ btn.disabled=true; btn.textContent='Verificando e-mail...'; }
+  const dominioOk = await dominioRecebeEmail(email.split('@')[1]);
+  if(btn){ btn.disabled=false; btn.textContent=btnTxt; }
+  if(!dominioOk){ err.textContent='O domínio do e-mail não recebe e-mails. Verifique se digitou corretamente.'; return; }
 
   // O perfil (com nome e função) é criado automaticamente por um trigger no banco,
   // lendo estes metadados. A regra do "primeiro sócio aprovado" também roda no banco.
