@@ -238,7 +238,14 @@ main{flex:1;overflow:hidden;display:flex;flex-direction:column}
   display:flex;gap:10px;align-items:flex-start;
   padding:9px 16px;border-bottom:1px solid var(--wire);
 }
+.notif-item[onclick]{cursor:pointer}
 .notif-item:hover{background:rgba(255,255,255,.02)}
+/* destaque ao chegar pela notificação */
+.cki-highlight{
+  border-color:var(--gold)!important;
+  box-shadow:0 0 0 2px var(--gold-bg), 0 0 16px rgba(224,168,37,.35);
+  transition:box-shadow .3s, border-color .3s;
+}
 .notif-ico{font-size:14px;flex-shrink:0;line-height:1.3}
 .notif-body{flex:1;min-width:0}
 .notif-txt{font-size:12px;font-weight:600;color:var(--snow);line-height:1.35}
@@ -855,16 +862,17 @@ async function carregarTudo(){
              telefone:c.telefone, admissao:c.admissao, obs:c.obs, checklists };
   });
 
-  // Mapa tarefa→(texto, colaborador) e feed de conclusões recentes (p/ notificações).
+  // Mapa tarefa→(texto, colaborador, período) e feed de conclusões recentes (p/ notificações).
   tarefaMap = {};
   colabs.forEach(c=>['diario','semanal','mensal'].forEach(p=>(c.checklists[p]||[]).forEach(t=>{
-    tarefaMap[t.id] = { texto:t.texto, colabNome:c.nome };
+    tarefaMap[t.id] = { texto:t.texto, colabNome:c.nome, colabId:c.id, periodo:p };
   })));
   conclusoesRecentes = cks
     .filter(c=>c.concluido!==false && c.criado_em)
-    .map(c=>({ texto:(tarefaMap[c.tarefa_id]||{}).texto||'Tarefa',
-               colabNome:(tarefaMap[c.tarefa_id]||{}).colabNome||'Colaborador',
-               ts:new Date(c.criado_em).getTime() }))
+    .map(c=>{ const m=tarefaMap[c.tarefa_id]||{};
+      return { texto:m.texto||'Tarefa', colabNome:m.colabNome||'Colaborador',
+               colabId:m.colabId||null, periodo:m.periodo||null, taskId:c.tarefa_id,
+               ts:new Date(c.criado_em).getTime() }; })
     .sort((a,b)=>b.ts-a.ts).slice(0,30);
 }
 
@@ -955,21 +963,26 @@ function computarNotificacoes(){
   const alvos = ehSocio ? colabs : colabs.filter(c=>c.id===sess.colabId);
   alvos.forEach(c=>['diario','semanal','mensal'].forEach(p=>(c.checklists[p]||[]).forEach(t=>{
     if(!isTaskDone(c.id,t.id,taskBucketKey(t)) && noHorarioLimite(t)){
-      out.push({ tipo:'lembrete', texto:t.texto, sub:(ehSocio?c.nome+' · ':'')+rotuloPrazo(t), ts:tsLimite(t) });
+      out.push({ tipo:'lembrete', texto:t.texto, sub:(ehSocio?c.nome+' · ':'')+rotuloPrazo(t),
+                 ts:tsLimite(t), colabId:c.id, periodo:p, taskId:t.id });
     }
     if(!isTaskDone(c.id,t.id,bucketAnterior(t)) && jaExistiaAntes(t)){
-      out.push({ tipo:'atrasado', texto:t.texto, sub:(ehSocio?c.nome:'Você')+' · período anterior', ts:tsInicioAtual(t) });
+      out.push({ tipo:'atrasado', texto:t.texto, sub:(ehSocio?c.nome:'Você')+' · período anterior',
+                 ts:tsInicioAtual(t), colabId:c.id, periodo:p, taskId:t.id });
     }
   })));
-  if(ehSocio) conclusoesRecentes.forEach(x=> out.push({ tipo:'conclusao', texto:x.texto, sub:x.colabNome, ts:x.ts }));
+  if(ehSocio) conclusoesRecentes.forEach(x=> out.push({ tipo:'conclusao', texto:x.texto, sub:x.colabNome,
+    ts:x.ts, colabId:x.colabId, periodo:x.periodo, taskId:x.taskId }));
   return out.sort((a,b)=>b.ts-a.ts);
 }
 
 function montarPainelHTML(lista){
   const urgentes=lista.filter(n=>n.tipo==='lembrete'||n.tipo==='atrasado');
   const ativid=lista.filter(n=>n.tipo==='conclusao');
+  const click = n => (n.colabId && n.taskId)
+    ? ` onclick="abrirTarefa('${n.colabId}','${n.periodo||'diario'}','${n.taskId}')"` : '';
   const item=n=>{
-    if(n.tipo==='conclusao') return `<div class="notif-item">
+    if(n.tipo==='conclusao') return `<div class="notif-item"${click(n)}>
       <span class="notif-ico">✅</span>
       <div class="notif-body"><div class="notif-txt">${n.texto}</div>
       <div class="notif-sub">${n.sub} · ${tempoAtras(n.ts)}</div></div></div>`;
@@ -977,7 +990,7 @@ function montarPainelHTML(lista){
     const tag=n.tipo==='atrasado'
       ?'<span class="notif-tag nt-atrasado">Atrasado</span>'
       :'<span class="notif-tag nt-lembrete">Lembrete</span>';
-    return `<div class="notif-item">
+    return `<div class="notif-item"${click(n)}>
       <span class="notif-ico">${ico}</span>
       <div class="notif-body"><div class="notif-txt">${n.texto}</div>
       <div class="notif-sub">${n.sub}</div></div>${tag}</div>`;
@@ -1010,6 +1023,27 @@ function toggleNotif(e){
 }
 function fecharNotif(){ const p=document.getElementById('notif-panel'); if(p) p.classList.remove('open'); }
 
+/* Navega da notificação até a tarefa e a destaca. */
+function abrirTarefa(colabId, periodo, taskId){
+  fecharNotif();
+  ckP = periodo || 'diario';
+  if(sess && sess.funcao==='socio'){
+    showTab('ind');
+    const s=document.getElementById('sel-ind'); if(s) s.value=colabId;
+    renderInd();
+  } else {
+    showTab('ma'); // já chama renderMA() com o ckP definido
+  }
+  setTimeout(()=>{
+    const el=document.querySelector(`[data-task="${taskId}"]`);
+    if(el){
+      el.scrollIntoView({behavior:'smooth', block:'center'});
+      el.classList.add('cki-highlight');
+      setTimeout(()=>el.classList.remove('cki-highlight'), 2200);
+    }
+  }, 80);
+}
+
 /* Realtime: conclusões ao vivo (assina a tabela checkins). */
 function onCheckinChange(payload){
   const row = payload.new || payload.old; if(!row || !row.tarefa_id) return;
@@ -1020,7 +1054,8 @@ function onCheckinChange(payload){
     checkinSet.add(key);
     if(sess && sess.funcao==='socio'){
       const info=tarefaMap[row.tarefa_id]||{};
-      conclusoesRecentes.unshift({ texto:info.texto||'Tarefa', colabNome:info.colabNome||'Colaborador', ts:Date.now() });
+      conclusoesRecentes.unshift({ texto:info.texto||'Tarefa', colabNome:info.colabNome||'Colaborador',
+        colabId:info.colabId||null, periodo:info.periodo||null, taskId:row.tarefa_id, ts:Date.now() });
       conclusoesRecentes=conclusoesRecentes.slice(0,30);
     }
   } else {
@@ -1545,7 +1580,7 @@ function buildCkPanel(c,period,active){
     const bucket=taskBucketKey(t);
     const done=isTaskDone(cid,t.id,bucket);
     const fi=freqInfo(t.frequencia,t);
-    return `<div class="cki${done?' done':''}" id="cki-${cid}-${period}-${i}">
+    return `<div class="cki${done?' done':''}" id="cki-${cid}-${period}-${i}" data-task="${t.id}">
       <input type="checkbox" id="ckc-${cid}-${period}-${i}" ${done?'checked':''}
         onchange="toggleCk('${cid}','${period}',${i})">
       <label class="cki-lbl" for="ckc-${cid}-${period}-${i}">${t.texto}</label>
