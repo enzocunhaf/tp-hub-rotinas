@@ -203,6 +203,54 @@ main{flex:1;overflow:hidden;display:flex;flex-direction:column}
 .tb-sub{font-size:10px;color:var(--mist2);font-weight:500;letter-spacing:.5px}
 .tb-clock{font-size:13px;font-weight:700;color:var(--mist2);letter-spacing:1px}
 
+/* ─── NOTIFICAÇÕES (sininho) ──────────────── */
+.tb-right{display:flex;align-items:center;gap:16px;position:relative}
+.notif-bell{
+  position:relative;background:none;border:none;cursor:pointer;
+  font-size:17px;line-height:1;padding:6px;border-radius:8px;
+  transition:background .15s;
+}
+.notif-bell:hover{background:rgba(255,255,255,.06)}
+.notif-badge{
+  position:absolute;top:0;right:0;min-width:16px;height:16px;padding:0 4px;
+  background:var(--red);color:#fff;border-radius:9px;
+  font-size:9px;font-weight:800;line-height:16px;text-align:center;
+  display:flex;align-items:center;justify-content:center;
+}
+.notif-panel{
+  display:none;position:absolute;top:46px;right:0;width:340px;max-width:88vw;
+  max-height:70vh;overflow-y:auto;z-index:850;
+  background:var(--ink1);border:1px solid var(--wire);border-radius:var(--r);
+  box-shadow:var(--sh);
+}
+.notif-panel.open{display:block}
+.notif-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;border-bottom:1px solid var(--wire);position:sticky;top:0;
+  background:var(--ink1);
+}
+.notif-hdr-title{font-size:10px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;color:var(--snow)}
+.notif-sec-lbl{
+  font-size:8.5px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--mist2);padding:12px 16px 4px;
+}
+.notif-item{
+  display:flex;gap:10px;align-items:flex-start;
+  padding:9px 16px;border-bottom:1px solid var(--wire);
+}
+.notif-item:hover{background:rgba(255,255,255,.02)}
+.notif-ico{font-size:14px;flex-shrink:0;line-height:1.3}
+.notif-body{flex:1;min-width:0}
+.notif-txt{font-size:12px;font-weight:600;color:var(--snow);line-height:1.35}
+.notif-sub{font-size:10px;color:var(--mist2);margin-top:2px}
+.notif-tag{
+  font-size:8px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+  padding:2px 6px;border-radius:8px;flex-shrink:0;align-self:center;
+}
+.nt-lembrete{background:var(--gold-bg);color:var(--gold);border:1px solid rgba(224,168,37,.25)}
+.nt-atrasado{background:var(--red-bg);color:var(--red);border:1px solid rgba(240,68,68,.25)}
+.notif-empty{text-align:center;padding:28px 16px;color:var(--mist2);font-size:11px}
+
 .content{flex:1;overflow-y:auto;padding:24px 28px}
 
 /* ─── TAB PANELS ──────────────────────────── */
@@ -648,7 +696,13 @@ tbody td{padding:11px 12px}
         <div class="tb-title" id="tb-title">Hub de Rotinas</div>
         <div class="tb-sub"  id="tb-sub"></div>
       </div>
-      <div class="tb-clock" id="tb-clock">--:--</div>
+      <div class="tb-right">
+        <button class="notif-bell" id="notif-bell" onclick="toggleNotif(event)" title="Notificações">
+          🔔<span class="notif-badge" id="notif-badge" style="display:none">0</span>
+        </button>
+        <div class="tb-clock" id="tb-clock">--:--</div>
+        <div class="notif-panel" id="notif-panel"></div>
+      </div>
     </div>
     <div class="content">
 
@@ -753,6 +807,10 @@ let profiles  = [];   // [{id, nome, funcao, ativo, colab_id, ...}]
 let colabs    = [];   // [{id, nome, ..., checklists:{diario,semanal,mensal}}]
 let checkinSet= new Set(); // "tarefaId__bucket" das tarefas concluídas
 let sess      = null; // {userId, nome, funcao:'socio'|'colaborador', colabId}
+let tarefaMap = {};   // tarefaId → {texto, colabNome} (p/ notificações)
+let conclusoesRecentes = []; // feed de conclusões [{texto, colabNome, ts}]
+let canalRealtime = null;    // canal Supabase Realtime de checkins
+let notifInterval = null;    // timer que reavalia lembretes/atrasos
 
 /* Carrega tudo do banco para o cache em memória.
    Sócio carrega todos; colaborador carrega só os próprios dados. */
@@ -770,7 +828,7 @@ async function carregarTudo(){
 
   let colQ = sb.from('colaboradores').select('*').order('criado_em',{ascending:true});
   let tkQ  = sb.from('tarefas').select('*').order('ordem',{ascending:true});
-  let ckQ  = sb.from('checkins').select('tarefa_id,bucket,concluido');
+  let ckQ  = sb.from('checkins').select('tarefa_id,colab_id,bucket,concluido,criado_em');
   if(!ehSocio && sess.colabId){
     colQ = colQ.eq('id', sess.colabId);
     tkQ  = tkQ.eq('colab_id', sess.colabId);
@@ -789,12 +847,25 @@ async function carregarTudo(){
     tks.filter(t=>t.colab_id===c.id).forEach(t=>{
       (checklists[t.periodo] || (checklists[t.periodo]=[])).push({
         id:t.id, texto:t.descricao, frequencia:t.frequencia||'diaria',
-        intervaloDias:t.intervalo_dias, dataInicio:t.data_inicio, dataFim:t.data_fim
+        intervaloDias:t.intervalo_dias, dataInicio:t.data_inicio, dataFim:t.data_fim,
+        criadoEm:t.criado_em
       });
     });
     return { id:c.id, nome:c.nome, email:c.email, cargo:c.cargo, area:c.area,
              telefone:c.telefone, admissao:c.admissao, obs:c.obs, checklists };
   });
+
+  // Mapa tarefa→(texto, colaborador) e feed de conclusões recentes (p/ notificações).
+  tarefaMap = {};
+  colabs.forEach(c=>['diario','semanal','mensal'].forEach(p=>(c.checklists[p]||[]).forEach(t=>{
+    tarefaMap[t.id] = { texto:t.texto, colabNome:c.nome };
+  })));
+  conclusoesRecentes = cks
+    .filter(c=>c.concluido!==false && c.criado_em)
+    .map(c=>({ texto:(tarefaMap[c.tarefa_id]||{}).texto||'Tarefa',
+               colabNome:(tarefaMap[c.tarefa_id]||{}).colabNome||'Colaborador',
+               ts:new Date(c.criado_em).getTime() }))
+    .sort((a,b)=>b.ts-a.ts).slice(0,30);
 }
 
 /* Re-renderiza a aba ativa após uma alteração. */
@@ -804,6 +875,169 @@ function rerenderAtual(){
   if(at('tp-ind'))   renderInd();
   if(at('tp-ma'))    renderMA();
   if(at('tp-geral')) renderGeral();
+}
+
+/* ══════════════════════════════════════════════
+   NOTIFICAÇÕES (sininho)
+══════════════════════════════════════════════ */
+function notifSeenKey(){ return 'tp_notif_seen_'+(sess?sess.userId:'x'); }
+function getNotifSeen(){ const v=localStorage.getItem(notifSeenKey()); return v?parseInt(v):0; }
+function setNotifSeen(ts){ localStorage.setItem(notifSeenKey(), String(ts)); }
+
+/* Passou do horário-limite do ciclo atual? (regra de prevenção de atraso:
+   diária 17h · semanal qui 17h → fim de semana · mensal dia 25 ·
+   quinzenal/personalizado 17h do último dia do período) */
+function noHorarioLimite(t){
+  const f=t.frequencia||'diaria', d=new Date(), h=d.getHours(), dow=d.getDay(), dom=d.getDate();
+  if(f==='diaria')  return h>=17;
+  if(f==='semanal') return (dow===4 && h>=17) || dow===5 || dow===6 || dow===0;
+  if(f==='mensal')  return dom>=25;
+  return ehUltimoDiaBucket(t) && h>=17;
+}
+function ehUltimoDiaBucket(t){
+  const today=daysSinceEpoch();
+  if((t.frequencia||'')==='quinzenal') return (today%15)===14;
+  const n=parseInt(t.intervaloDias)||7;
+  let origin=0;
+  if(t.dataInicio) origin=Math.floor((new Date(t.dataInicio).getTime()-EPOCH)/86400000);
+  return ((today-origin)%n)===(n-1);
+}
+
+/* Bucket do ciclo ANTERIOR — mesmo formato de taskBucketKey(). */
+function bucketAnterior(t){
+  const f=t.frequencia||'diaria';
+  if(f==='diaria'){ const d=new Date(); d.setDate(d.getDate()-1); return 'D'+d.toISOString().split('T')[0]; }
+  if(f==='semanal'){ const d=new Date(); d.setDate(d.getDate()-7);
+    const dy=d.getDay(), m=new Date(d); m.setDate(d.getDate()-(dy===0?6:dy-1));
+    return 'S'+m.toISOString().split('T')[0]; }
+  if(f==='quinzenal') return 'Q'+(Math.floor(daysSinceEpoch()/15)-1);
+  if(f==='mensal'){ const d=new Date(); d.setMonth(d.getMonth()-1);
+    return 'M'+`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+  const n=parseInt(t.intervaloDias)||7;
+  if(t.dataInicio){ const origin=Math.floor((new Date(t.dataInicio).getTime()-EPOCH)/86400000);
+    return 'C'+(Math.floor((daysSinceEpoch()-origin)/n)-1); }
+  return 'C'+(Math.floor(daysSinceEpoch()/n)-1);
+}
+
+function tsInicioAtual(t){
+  const f=t.frequencia||'diaria', d=new Date();
+  if(f==='mensal') return new Date(d.getFullYear(),d.getMonth(),1).getTime();
+  if(f==='semanal'){ const x=new Date(d), dow=x.getDay(); x.setDate(x.getDate()-(dow===0?6:dow-1)); x.setHours(0,0,0,0); return x.getTime(); }
+  const x=new Date(d); x.setHours(0,0,0,0); return x.getTime();
+}
+function tsLimite(t){
+  const f=t.frequencia||'diaria', d=new Date();
+  if(f==='mensal') return new Date(d.getFullYear(),d.getMonth(),25,0,0,0).getTime();
+  if(f==='semanal'){ const x=new Date(d), dow=x.getDay(), diff=4-(dow===0?7:dow); x.setDate(x.getDate()+diff); x.setHours(17,0,0,0); return x.getTime(); }
+  const x=new Date(d); x.setHours(17,0,0,0); return x.getTime();
+}
+function jaExistiaAntes(t){
+  if(!t.criadoEm) return true;
+  return new Date(t.criadoEm).getTime() < tsInicioAtual(t);
+}
+function rotuloPrazo(t){
+  const f=t.frequencia||'diaria';
+  return f==='diaria'?'prazo: hoje':f==='semanal'?'prazo: esta semana':f==='mensal'?'prazo: este mês':'prazo: fim do período';
+}
+function tempoAtras(ts){
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60) return 'agora';
+  if(s<3600) return 'há '+Math.floor(s/60)+' min';
+  if(s<86400) return 'há '+Math.floor(s/3600)+' h';
+  const dd=Math.floor(s/86400);
+  return dd===1?'ontem':'há '+dd+' dias';
+}
+
+/* Monta a lista de notificações a partir do cache. */
+function computarNotificacoes(){
+  if(!sess) return [];
+  const out=[], ehSocio=sess.funcao==='socio';
+  const alvos = ehSocio ? colabs : colabs.filter(c=>c.id===sess.colabId);
+  alvos.forEach(c=>['diario','semanal','mensal'].forEach(p=>(c.checklists[p]||[]).forEach(t=>{
+    if(!isTaskDone(c.id,t.id,taskBucketKey(t)) && noHorarioLimite(t)){
+      out.push({ tipo:'lembrete', texto:t.texto, sub:(ehSocio?c.nome+' · ':'')+rotuloPrazo(t), ts:tsLimite(t) });
+    }
+    if(!isTaskDone(c.id,t.id,bucketAnterior(t)) && jaExistiaAntes(t)){
+      out.push({ tipo:'atrasado', texto:t.texto, sub:(ehSocio?c.nome:'Você')+' · período anterior', ts:tsInicioAtual(t) });
+    }
+  })));
+  if(ehSocio) conclusoesRecentes.forEach(x=> out.push({ tipo:'conclusao', texto:x.texto, sub:x.colabNome, ts:x.ts }));
+  return out.sort((a,b)=>b.ts-a.ts);
+}
+
+function montarPainelHTML(lista){
+  const urgentes=lista.filter(n=>n.tipo==='lembrete'||n.tipo==='atrasado');
+  const ativid=lista.filter(n=>n.tipo==='conclusao');
+  const item=n=>{
+    if(n.tipo==='conclusao') return `<div class="notif-item">
+      <span class="notif-ico">✅</span>
+      <div class="notif-body"><div class="notif-txt">${n.texto}</div>
+      <div class="notif-sub">${n.sub} · ${tempoAtras(n.ts)}</div></div></div>`;
+    const ico=n.tipo==='atrasado'?'🔴':'⏰';
+    const tag=n.tipo==='atrasado'
+      ?'<span class="notif-tag nt-atrasado">Atrasado</span>'
+      :'<span class="notif-tag nt-lembrete">Lembrete</span>';
+    return `<div class="notif-item">
+      <span class="notif-ico">${ico}</span>
+      <div class="notif-body"><div class="notif-txt">${n.texto}</div>
+      <div class="notif-sub">${n.sub}</div></div>${tag}</div>`;
+  };
+  let html=`<div class="notif-hdr"><div class="notif-hdr-title">Notificações</div>
+    <button class="modal-close" style="position:static;padding:2px" onclick="fecharNotif()">✕</button></div>`;
+  if(!lista.length){ html+=`<div class="notif-empty">Tudo em dia! 🎉<br>Sem pendências no momento.</div>`; return html; }
+  if(urgentes.length){ html+=`<div class="notif-sec-lbl">Atrasos e pendências</div>`+urgentes.map(item).join(''); }
+  if(ativid.length){ html+=`<div class="notif-sec-lbl">Atividade recente</div>`+ativid.map(item).join(''); }
+  return html;
+}
+
+function renderNotif(){
+  const lista=computarNotificacoes();
+  const naoLidas=lista.filter(n=>n.ts>getNotifSeen()).length;
+  const badge=document.getElementById('notif-badge');
+  if(badge){ badge.textContent=naoLidas>9?'9+':String(naoLidas); badge.style.display=naoLidas>0?'flex':'none'; }
+  const panel=document.getElementById('notif-panel');
+  if(panel && panel.classList.contains('open')) panel.innerHTML=montarPainelHTML(lista);
+}
+
+function toggleNotif(e){
+  if(e) e.stopPropagation();
+  const panel=document.getElementById('notif-panel'); if(!panel) return;
+  if(panel.classList.contains('open')){ panel.classList.remove('open'); return; }
+  panel.classList.add('open');
+  panel.innerHTML=montarPainelHTML(computarNotificacoes());
+  setNotifSeen(Date.now());
+  renderNotif(); // zera o badge
+}
+function fecharNotif(){ const p=document.getElementById('notif-panel'); if(p) p.classList.remove('open'); }
+
+/* Realtime: conclusões ao vivo (assina a tabela checkins). */
+function onCheckinChange(payload){
+  const row = payload.new || payload.old; if(!row || !row.tarefa_id) return;
+  const key = row.tarefa_id+'__'+row.bucket;
+  if(payload.eventType==='DELETE'){
+    checkinSet.delete(key);
+  } else if(row.concluido!==false){
+    checkinSet.add(key);
+    if(sess && sess.funcao==='socio'){
+      const info=tarefaMap[row.tarefa_id]||{};
+      conclusoesRecentes.unshift({ texto:info.texto||'Tarefa', colabNome:info.colabNome||'Colaborador', ts:Date.now() });
+      conclusoesRecentes=conclusoesRecentes.slice(0,30);
+    }
+  } else {
+    checkinSet.delete(key);
+  }
+  renderNotif();
+  rerenderAtual();
+}
+function iniciarRealtime(){
+  if(!sb || !sess) return;
+  pararRealtime();
+  canalRealtime = sb.channel('rt-checkins')
+    .on('postgres_changes', { event:'*', schema:'public', table:'checkins' }, onCheckinChange)
+    .subscribe();
+}
+function pararRealtime(){
+  if(canalRealtime){ sb.removeChannel(canalRealtime); canalRealtime=null; }
 }
 
 /* ══════════════════════════════════════════════
@@ -943,6 +1177,9 @@ async function cadastrar(){
 }
 
 async function sair(){
+  pararRealtime();
+  if(notifInterval){ clearInterval(notifInterval); notifInterval=null; }
+  fecharNotif();
   if(sb) await sb.auth.signOut();
   sess=null;
   document.getElementById('auth-screen').style.display='flex';
@@ -1000,6 +1237,11 @@ function iniciarApp(){
   buildNav();
   if(sess.funcao==='socio') showTab('geral');
   else showTab('ma');
+  // Notificações: badge inicial, tempo real e reavaliação periódica dos lembretes.
+  renderNotif();
+  iniciarRealtime();
+  if(notifInterval) clearInterval(notifInterval);
+  notifInterval = setInterval(renderNotif, 60000);
 }
 
 /* ══════════════════════════════════════════════
@@ -1565,6 +1807,14 @@ function renderMA(){
       'Configure SUPABASE_URL e SUPABASE_KEY no topo do <script> deste arquivo.';
     return;
   }
+  // Fecha o painel de notificações ao clicar fora dele.
+  document.addEventListener('click', (e)=>{
+    const panel=document.getElementById('notif-panel');
+    const bell=document.getElementById('notif-bell');
+    if(panel && panel.classList.contains('open') && !panel.contains(e.target) && bell && !bell.contains(e.target)){
+      panel.classList.remove('open');
+    }
+  });
   // Se já houver uma sessão válida salva, entra direto.
   const { data:{ session } } = await sb.auth.getSession();
   if(session) await iniciarSessao(null);

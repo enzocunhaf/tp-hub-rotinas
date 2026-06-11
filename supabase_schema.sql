@@ -210,6 +210,18 @@ CREATE POLICY checkins_delete ON checkins FOR DELETE TO authenticated
   USING ( colab_id = meu_colab_id() OR is_socio() );
 
 -- ═══════════════════════════════════════════════════════════
+-- REALTIME — necessário para o sininho de notificações
+-- (conclusões ao vivo). REPLICA IDENTITY FULL faz o evento de
+-- DELETE (desmarcar) trazer a linha completa.
+-- ═══════════════════════════════════════════════════════════
+ALTER TABLE checkins REPLICA IDENTITY FULL;
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE checkins;
+EXCEPTION WHEN OTHERS THEN NULL;  -- já está na publicação
+END $$;
+
+-- ═══════════════════════════════════════════════════════════
 -- CONFIGURAÇÃO OBRIGATÓRIA NO PAINEL DO SUPABASE:
 --
 -- 1. Authentication → Providers → Email
