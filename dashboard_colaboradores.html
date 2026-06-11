@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Túlio Parca Advogados</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ══════════════════════════════════════════════
    DESIGN TOKENS — dark com paleta viva
@@ -587,7 +588,7 @@ tbody td{padding:11px 12px}
         </div>
         <div class="auth-err" id="l-err"></div>
         <button class="auth-submit" onclick="login()">Entrar</button>
-        <div class="auth-footer">Seus dados ficam seguros no dispositivo.</div>
+        <div class="auth-footer">Acesso protegido. Seus dados ficam salvos na nuvem.</div>
       </div>
 
       <!-- PAINEL CADASTRAR -->
@@ -616,7 +617,7 @@ tbody td{padding:11px 12px}
         <div class="auth-err" id="c-err"></div>
         <div class="auth-ok" id="c-ok">Cadastro realizado! Faça login.</div>
         <button class="auth-submit" onclick="cadastrar()">Criar Conta</button>
-        <div class="auth-footer">Novos cadastros de Sócio(a) requerem aprovação do gestor.</div>
+        <div class="auth-footer">Novos cadastros requerem aprovação de um sócio.</div>
       </div>
     </div>
 
@@ -737,7 +738,7 @@ tbody td{padding:11px 12px}
         <div class="card">
           <div class="card-hdr">
             <div class="card-title">Acessos ao Sistema</div>
-            <button class="btn btn-gold btn-sm" onclick="openModal(null)">+ Adicionar Membro</button>
+            <span class="chip">Cadastro na tela inicial</span>
           </div>
           <div id="a-err" class="alert"></div>
           <div class="tbl-wrap">
@@ -808,19 +809,81 @@ tbody td{padding:11px 12px}
 
 <script>
 /* ══════════════════════════════════════════════
-   STORAGE KEYS
+   CONFIGURAÇÃO DO SUPABASE
+   ┌────────────────────────────────────────────┐
+   │  COLE AQUI suas credenciais (Settings →     │
+   │  API no painel do Supabase):                │
+   │   • SUPABASE_URL  → Project URL             │
+   │   • SUPABASE_KEY  → anon public key (eyJ…)  │
+   └────────────────────────────────────────────┘
 ══════════════════════════════════════════════ */
-const K_USERS  = 'tp_users_v1';
-const K_COLABS = 'tp_colabs_v1';
+const SUPABASE_URL = 'https://sozlwlmorrskvydcnago.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvemx3bG1vcnJza3Z5ZGNuYWdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMjk1MDAsImV4cCI6MjA5NjcwNTUwMH0.29fhEQySgK2eNzQKl29QZTUlgIq_j7Td4SzyzeDQOxo';
 
-function loadUsers(){  try{ return JSON.parse(localStorage.getItem(K_USERS)) ||[]; }catch(e){ return []; } }
-function saveUsers(u){ localStorage.setItem(K_USERS,  JSON.stringify(u)); }
-function loadColabs(){ try{ return JSON.parse(localStorage.getItem(K_COLABS))||[]; }catch(e){ return []; } }
-function saveColabs(c){ localStorage.setItem(K_COLABS, JSON.stringify(c)); }
+// Aceita a chave "anon public" (eyJ...) ou a "publishable" (sb_publishable_...)
+const sb = (SUPABASE_URL.startsWith('http') && /^(ey|sb_publishable_)/.test(SUPABASE_KEY))
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
 
-let users  = loadUsers();
-let colabs = loadColabs();
-let sess   = null; // {userId, nome, funcao:'socio'|'colaborador', colabId}
+/* ══════════════════════════════════════════════
+   ESTADO EM MEMÓRIA (cache carregado do Supabase)
+══════════════════════════════════════════════ */
+let profiles  = [];   // [{id, nome, funcao, ativo, colab_id, ...}]
+let colabs    = [];   // [{id, nome, ..., checklists:{diario,semanal,mensal}}]
+let checkinSet= new Set(); // "tarefaId__bucket" das tarefas concluídas
+let sess      = null; // {userId, nome, funcao:'socio'|'colaborador', colabId}
+
+/* Carrega tudo do banco para o cache em memória.
+   Sócio carrega todos; colaborador carrega só os próprios dados. */
+async function carregarTudo(){
+  if(!sb || !sess) return;
+  const ehSocio = sess.funcao === 'socio';
+
+  if(ehSocio){
+    const { data: profs, error } = await sb.from('profiles').select('*').order('criado_em',{ascending:true});
+    if(error) console.error('profiles:', error.message);
+    profiles = profs || [];
+  } else {
+    profiles = [];
+  }
+
+  let colQ = sb.from('colaboradores').select('*').order('criado_em',{ascending:true});
+  let tkQ  = sb.from('tarefas').select('*').order('ordem',{ascending:true});
+  let ckQ  = sb.from('checkins').select('tarefa_id,bucket,concluido');
+  if(!ehSocio && sess.colabId){
+    colQ = colQ.eq('id', sess.colabId);
+    tkQ  = tkQ.eq('colab_id', sess.colabId);
+    ckQ  = ckQ.eq('colab_id', sess.colabId);
+  }
+  const [colRes, tkRes, ckRes] = await Promise.all([colQ, tkQ, ckQ]);
+  if(colRes.error) console.error('colaboradores:', colRes.error.message);
+  if(tkRes.error)  console.error('tarefas:', tkRes.error.message);
+  if(ckRes.error)  console.error('checkins:', ckRes.error.message);
+
+  const cols = colRes.data || [], tks = tkRes.data || [], cks = ckRes.data || [];
+  checkinSet = new Set(cks.filter(c=>c.concluido!==false).map(c=>c.tarefa_id+'__'+c.bucket));
+
+  colabs = cols.map(c=>{
+    const checklists = {diario:[],semanal:[],mensal:[]};
+    tks.filter(t=>t.colab_id===c.id).forEach(t=>{
+      (checklists[t.periodo] || (checklists[t.periodo]=[])).push({
+        id:t.id, texto:t.descricao, frequencia:t.frequencia||'diaria',
+        intervaloDias:t.intervalo_dias, dataInicio:t.data_inicio, dataFim:t.data_fim
+      });
+    });
+    return { id:c.id, nome:c.nome, email:c.email, cargo:c.cargo, area:c.area,
+             telefone:c.telefone, admissao:c.admissao, obs:c.obs, checklists };
+  });
+}
+
+/* Re-renderiza a aba ativa após uma alteração. */
+function rerenderAtual(){
+  const at = id => document.getElementById(id)?.classList.contains('active');
+  if(at('tp-gestao')){ renderEquipe(); renderTabelaCad(); }
+  if(at('tp-ind'))   renderInd();
+  if(at('tp-ma'))    renderMA();
+  if(at('tp-geral')) renderGeral();
+}
 
 /* ══════════════════════════════════════════════
    UTILS
@@ -831,14 +894,9 @@ const todayK= () => new Date().toISOString().split('T')[0];
 const weekK = () => { const d=new Date(),dy=d.getDay(),m=new Date(d); m.setDate(d.getDate()-(dy===0?6:dy-1)); return m.toISOString().split('T')[0]; };
 const monthK= () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; };
 const uid   = () => Math.random().toString(36).slice(2)+Date.now().toString(36);
-const h     = s => btoa(s+':tp_salt_2025'); // ofuscação simples
 
 function cargoClass(c){ return ['Sócio(a)','Advogado(a) Associado(a)','Estagiário(a) de Direito'].includes(c)?'adv':'adm'; }
 
-/* ── CHECKLIST STORAGE (legado — não mais usado, mantido para compat) ── */
-function ckKey(id,p){ const k=p==='diario'?todayK():p==='semanal'?weekK():monthK(); return `ck_${id}_${p}_${k}`; }
-function getCk(id,p){ try{ return JSON.parse(localStorage.getItem(ckKey(id,p)))||[]; }catch(e){ return []; } }
-function setCk(id,p,a){ localStorage.setItem(ckKey(id,p),JSON.stringify(a)); }
 function getProgress(id,p){
   const c=colabs.find(x=>x.id===id); if(!c) return {done:0,total:0,pct:0};
   const raw=(c.checklists||{})[p]||[];
@@ -867,20 +925,36 @@ function switchAuth(mode){
   document.getElementById('c-err').textContent='';
 }
 
-function login(){
+async function login(){
   const email = document.getElementById('l-email').value.trim().toLowerCase();
   const senha = document.getElementById('l-senha').value;
   const err   = document.getElementById('l-err');
   err.textContent='';
+  if(!sb){ err.textContent='Sistema não configurado (faltam as credenciais do Supabase).'; return; }
   if(!email||!senha){ err.textContent='Preencha todos os campos.'; return; }
-  const u = users.find(x=>x.email===email && x.senha===h(senha));
-  if(!u){ err.textContent='E-mail ou senha incorretos.'; return; }
-  if(!u.ativo){ err.textContent='Conta pendente de aprovação.'; return; }
-  sess={ userId:u.id, nome:u.nome, funcao:u.funcao, colabId:u.colabId||null };
+
+  const { error } = await sb.auth.signInWithPassword({ email, password:senha });
+  if(error){ err.textContent='E-mail ou senha incorretos.'; return; }
+  await iniciarSessao(err);
+}
+
+/* Carrega o perfil do usuário logado, valida aprovação e inicia o app. */
+async function iniciarSessao(errEl){
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user){ if(errEl) errEl.textContent='Sessão inválida.'; return; }
+
+  const { data: prof } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  if(!prof){ await sb.auth.signOut(); if(errEl) errEl.textContent='Perfil não encontrado. Contate o gestor.'; return; }
+  if(!prof.ativo){ await sb.auth.signOut(); if(errEl) errEl.textContent='Conta pendente de aprovação.'; return; }
+
+  sess = { userId:user.id, nome:prof.nome, funcao:prof.funcao, colabId:prof.colab_id||null };
+  // Obs.: o registro em "colaboradores" já é criado pelo trigger no cadastro.
+
+  await carregarTudo();
   iniciarApp();
 }
 
-function cadastrar(){
+async function cadastrar(){
   const nome   = document.getElementById('c-nome').value.trim();
   const email  = document.getElementById('c-email').value.trim().toLowerCase();
   const senha  = document.getElementById('c-senha').value;
@@ -889,32 +963,28 @@ function cadastrar(){
   const ok     = document.getElementById('c-ok');
   err.textContent=''; ok.style.display='none';
 
+  if(!sb){ err.textContent='Sistema não configurado (faltam as credenciais do Supabase).'; return; }
   if(!nome||!email||!senha||!funcao){ err.textContent='Preencha todos os campos.'; return; }
   if(senha.length<6){ err.textContent='Senha deve ter ao menos 6 caracteres.'; return; }
-  if(users.find(x=>x.email===email)){ err.textContent='Este e-mail já está cadastrado.'; return; }
 
-  // Regra de bootstrap: se não há nenhum sócio ativo, o primeiro sócio é aprovado automaticamente.
-  // A partir do segundo, fica pendente de aprovação por um sócio existente.
-  const hasSocioAtivo = users.some(x => x.funcao === 'socio' && x.ativo);
-  const ativo = funcao === 'colaborador' || !hasSocioAtivo;
-
-  // Se for colaborador, cria entrada em colabs
-  let colabId = null;
-  if(funcao==='colaborador'){
-    colabId = uid();
-    const novo = {
-      id:colabId, nome, email, cargo:'', area:'', telefone:'', admissao:'', obs:'',
-      checklists:{diario:[],semanal:[],mensal:[]}
-    };
-    colabs.push(novo); saveColabs(colabs);
+  // O perfil (com nome e função) é criado automaticamente por um trigger no banco,
+  // lendo estes metadados. A regra do "primeiro sócio aprovado" também roda no banco.
+  const { error } = await sb.auth.signUp({
+    email, password:senha,
+    options:{ data:{ nome, funcao } }
+  });
+  if(error){
+    err.textContent = /registered|already/i.test(error.message)
+      ? 'Este e-mail já está cadastrado.' : error.message;
+    return;
   }
 
-  users.push({ id:uid(), nome, email, senha:h(senha), funcao, colabId, ativo });
-  saveUsers(users);
+  // Encerra a sessão criada no cadastro para forçar login explícito (respeitando a aprovação).
+  await sb.auth.signOut();
 
-  ok.textContent = (funcao==='socio' && hasSocioAtivo)
-    ? 'Cadastro enviado! Aguarde aprovação de um sócio.'
-    : 'Conta criada! Faça login agora.';
+  ok.textContent = (funcao==='socio')
+    ? 'Cadastro de sócio enviado. O primeiro sócio entra direto; os demais aguardam aprovação.'
+    : 'Cadastro enviado! Aguarde a aprovação de um sócio para acessar.';
   ok.style.display='block';
   document.getElementById('c-nome').value='';
   document.getElementById('c-email').value='';
@@ -922,7 +992,8 @@ function cadastrar(){
   document.getElementById('c-funcao').value='';
 }
 
-function sair(){
+async function sair(){
+  if(sb) await sb.auth.signOut();
   sess=null;
   document.getElementById('auth-screen').style.display='flex';
   document.getElementById('app').style.display='none';
@@ -986,19 +1057,18 @@ function iniciarApp(){
 ══════════════════════════════════════════════ */
 function renderEquipe(){
   const tb=document.getElementById('tbody-equipe'); if(!tb) return;
-  users=[...loadUsers()]; // reload fresh
-  if(users.length===0){
+  if(profiles.length===0){
     tb.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-ico">👤</div><p>Nenhum usuário cadastrado</p></div></td></tr>`;
     return;
   }
-  tb.innerHTML=users.map(u=>{
-    const c=colabs.find(x=>x.id===u.colabId);
+  tb.innerHTML=profiles.map(u=>{
+    const c=colabs.find(x=>x.id===u.colab_id);
     const statusBadge=u.ativo
       ?`<span class="badge b-colab">Ativo</span>`
       :`<span class="badge" style="background:var(--or-bg);color:var(--or);border-color:rgba(176,107,46,.2)">Pendente</span>`;
     return `<tr>
       <td><div class="td-name">${u.nome}</div></td>
-      <td style="font-size:11px;color:var(--mist)">${u.email}</td>
+      <td style="font-size:11px;color:var(--mist)">${c?.email||'—'}</td>
       <td><span class="badge ${u.funcao==='socio'?'b-socio':'b-colab'}">${u.funcao==='socio'?'Sócio':'Colaborador'}</span></td>
       <td style="font-size:11px;color:var(--mist)">${c?.cargo||'—'}</td>
       <td style="font-size:11px;color:var(--mist)">${c?.area||'—'}</td>
@@ -1013,18 +1083,21 @@ function renderEquipe(){
   }).join('');
 }
 
-function aprovarUser(id){
-  const u=users.find(x=>x.id===id); if(!u) return;
-  u.ativo=true; saveUsers(users); renderEquipe();
+async function aprovarUser(id){
+  const { error } = await sb.from('profiles').update({ ativo:true }).eq('id', id);
+  if(error){ alert('Erro ao aprovar: '+error.message); return; }
+  await carregarTudo(); renderEquipe();
 }
 
-function removerUser(id){
-  const u=users.find(x=>x.id===id); if(!u) return;
+async function removerUser(id){
+  const u=profiles.find(x=>x.id===id); if(!u) return;
   if(!confirm(`Remover o acesso de ${u.nome}?`)) return;
-  users=users.filter(x=>x.id!==id); saveUsers(users);
-  // remove colab vinculado
-  if(u.colabId){ colabs=colabs.filter(x=>x.id!==u.colabId); saveColabs(colabs); }
-  renderEquipe(); renderTabelaCad();
+  // Remove o colaborador vinculado (cascata apaga tarefas/checkins) e o perfil.
+  // Obs.: o usuário de login (Auth) permanece, mas sem perfil não acessa o sistema.
+  if(u.colab_id) await sb.from('colaboradores').delete().eq('id', u.colab_id);
+  const { error } = await sb.from('profiles').delete().eq('id', id);
+  if(error){ alert('Erro ao remover: '+error.message); return; }
+  await carregarTudo(); renderEquipe(); renderTabelaCad();
 }
 
 /* MODAL */
@@ -1036,11 +1109,11 @@ function openModal(userId){
   document.getElementById('m-err').className='alert';
 
   if(!isNew){
-    const u=users.find(x=>x.id===userId); if(!u) return;
+    const u=profiles.find(x=>x.id===userId); if(!u) return;
+    const c=colabs.find(x=>x.id===u.colab_id)||{};
     document.getElementById('m-nome').value=u.nome||'';
-    document.getElementById('m-email').value=u.email||'';
+    document.getElementById('m-email').value=c.email||'';
     document.getElementById('m-funcao').value=u.funcao||'colaborador';
-    const c=colabs.find(x=>x.id===u.colabId)||{};
     document.getElementById('m-cargo').value=c.cargo||'';
     document.getElementById('m-area').value=c.area||'';
     document.getElementById('m-tel').value=c.telefone||'';
@@ -1055,7 +1128,7 @@ function openModal(userId){
 }
 function closeModal(){ document.getElementById('modal-user').classList.remove('open'); }
 
-function salvarModal(){
+async function salvarModal(){
   const userId  = document.getElementById('m-id').value;
   const nome    = document.getElementById('m-nome').value.trim();
   const email   = document.getElementById('m-email').value.trim().toLowerCase();
@@ -1067,35 +1140,31 @@ function salvarModal(){
   const obs     = document.getElementById('m-obs').value.trim();
   const errEl   = document.getElementById('m-err');
 
-  if(!nome||!email||!funcao){ errEl.className='alert err'; errEl.textContent='Preencha nome, e-mail e função.'; return; }
-
-  if(userId){
-    // EDITAR
-    const u=users.find(x=>x.id===userId); if(!u) return;
-    const dupE=users.find(x=>x.email===email && x.id!==userId);
-    if(dupE){ errEl.className='alert err'; errEl.textContent='E-mail já usado por outro usuário.'; return; }
-    u.nome=nome; u.email=email; u.funcao=funcao;
-    // sync / create colab
-    if(funcao==='colaborador'){
-      if(!u.colabId){ u.colabId=uid(); colabs.push({id:u.colabId,nome,email,cargo,area,telefone:tel,admissao:adm,obs,checklists:{diario:[],semanal:[],mensal:[]}}); }
-      else{ const c=colabs.find(x=>x.id===u.colabId); if(c){ c.nome=nome;c.email=email;c.cargo=cargo;c.area=area;c.telefone=tel;c.admissao=adm;c.obs=obs; } }
-    }
-    saveUsers(users); saveColabs(colabs);
-  } else {
-    // ADICIONAR
-    if(users.find(x=>x.email===email)){ errEl.className='alert err'; errEl.textContent='E-mail já cadastrado.'; return; }
-    let colabId=null;
-    if(funcao==='colaborador'){
-      colabId=uid();
-      colabs.push({id:colabId,nome,email,cargo,area,telefone:tel,admissao:adm,obs,checklists:{diario:[],semanal:[],mensal:[]}});
-      saveColabs(colabs);
-    }
-    users.push({id:uid(),nome,email,senha:h('tulio@2025'), // senha padrão inicial
-      funcao,colabId,ativo:true});
-    saveUsers(users);
+  if(!nome||!funcao){ errEl.className='alert err'; errEl.textContent='Preencha nome e função.'; return; }
+  if(!userId){
+    errEl.className='alert err';
+    errEl.textContent='Novos membros se cadastram pela tela inicial. Aqui você edita os existentes.';
+    return;
   }
 
-  closeModal(); renderEquipe(); renderTabelaCad();
+  const u=profiles.find(x=>x.id===userId); if(!u) return;
+
+  // Atualiza o perfil (nome + função)
+  const { error: e1 } = await sb.from('profiles').update({ nome, funcao }).eq('id', userId);
+  if(e1){ errEl.className='alert err'; errEl.textContent='Erro: '+e1.message; return; }
+
+  // Sincroniza / cria os dados de colaborador
+  if(funcao==='colaborador'){
+    const dados={ nome, email, cargo, area, telefone:tel, admissao:adm||null, obs };
+    if(u.colab_id){
+      await sb.from('colaboradores').update(dados).eq('id', u.colab_id);
+    } else {
+      const { data: novo } = await sb.from('colaboradores').insert(dados).select().single();
+      if(novo) await sb.from('profiles').update({ colab_id:novo.id }).eq('id', userId);
+    }
+  }
+
+  closeModal(); await carregarTudo(); renderEquipe(); renderTabelaCad();
 }
 
 /* ══════════════════════════════════════════════
@@ -1103,10 +1172,14 @@ function salvarModal(){
 ══════════════════════════════════════════════ */
 // salvarColab: substituído pelo modal unificado (openModal/salvarModal)
 
-function excluirColab(id){
+async function excluirColab(id){
   const c=colabs.find(x=>x.id===id);
   if(!c||!confirm(`Remover ${c.nome}?`)) return;
-  colabs=colabs.filter(x=>x.id!==id); saveColabs(colabs); renderTabelaCad();
+  await sb.from('colaboradores').delete().eq('id', id); // cascata: apaga tarefas/checkins
+  // Desvincula o perfil que apontava para este colaborador (se houver)
+  const p=profiles.find(x=>x.colab_id===id);
+  if(p) await sb.from('profiles').update({ colab_id:null }).eq('id', p.id);
+  await carregarTudo(); renderTabelaCad(); renderEquipe();
 }
 
 function renderTabelaCad(){
@@ -1219,11 +1292,20 @@ function taskBucketKey(task){
 }
 
 function isTaskDone(colabId,taskId,bucket){
-  return localStorage.getItem(`ck3_${colabId}_${taskId}_${bucket}`)===`1`;
+  return checkinSet.has(taskId+'__'+bucket);
 }
-function setTaskDone(colabId,taskId,bucket,done){
-  const k=`ck3_${colabId}_${taskId}_${bucket}`;
-  if(done) localStorage.setItem(k,'1'); else localStorage.removeItem(k);
+async function setTaskDone(colabId,taskId,bucket,done){
+  const key=taskId+'__'+bucket;
+  if(done){
+    checkinSet.add(key);
+    return sb.from('checkins').upsert(
+      { tarefa_id:taskId, colab_id:colabId, bucket, concluido:true },
+      { onConflict:'tarefa_id,colab_id,bucket' }
+    );
+  } else {
+    checkinSet.delete(key);
+    return sb.from('checkins').delete().match({ tarefa_id:taskId, bucket });
+  }
 }
 
 /* frequência → label + classe */
@@ -1299,19 +1381,24 @@ function toggleDateRange(cid,period){
 
 function switchCk(id,p,mode){ ckP=p; if(mode==='mgr') renderInd(); else renderMA(); }
 
-function toggleCk(cid,period,idx){
+async function toggleCk(cid,period,idx){
   const c=colabs.find(x=>x.id===cid); if(!c) return;
   const raw=(c.checklists||{})[period]||[];
   const task=normTask(raw[idx]); if(!task) return;
   const bucket=taskBucketKey(task);
   const wasDone=isTaskDone(cid,task.id,bucket);
-  setTaskDone(cid,task.id,bucket,!wasDone);
-  const inInd=document.getElementById('tp-ind').classList.contains('active');
-  const inMA =document.getElementById('tp-ma').classList.contains('active');
-  if(inInd) renderInd(); if(inMA) renderMA();
+  // Atualização otimista + re-render imediato (UI responsiva)
+  const { error } = await setTaskDone(cid,task.id,bucket,!wasDone) || {};
+  rerenderAtual();
+  if(error){
+    // Reverte em caso de falha
+    if(wasDone) checkinSet.add(task.id+'__'+bucket); else checkinSet.delete(task.id+'__'+bucket);
+    rerenderAtual();
+    alert('Não foi possível salvar a marcação: '+error.message);
+  }
 }
 
-function addTask(cid,period){
+async function addTask(cid,period){
   const txtEl=document.getElementById(`nt-txt-${cid}-${period}`);
   const freqEl=document.getElementById(`nt-freq-${cid}-${period}`);
   const texto=(txtEl?txtEl.value.trim():''); if(!texto) return;
@@ -1327,12 +1414,13 @@ function addTask(cid,period){
     } else { intervaloDias=7; }
   }
   const c=colabs.find(x=>x.id===cid); if(!c) return;
-  if(!c.checklists) c.checklists={diario:[],semanal:[],mensal:[]};
-  c.checklists[period].push({id:uid(),texto,frequencia,intervaloDias,dataInicio,dataFim});
-  saveColabs(colabs);
-  const inInd=document.getElementById('tp-ind').classList.contains('active');
-  const inMA =document.getElementById('tp-ma').classList.contains('active');
-  if(inInd) renderInd(); if(inMA) renderMA();
+  const ordem=((c.checklists||{})[period]||[]).length;
+  const { error } = await sb.from('tarefas').insert({
+    colab_id:cid, periodo:period, descricao:texto, frequencia,
+    intervalo_dias:intervaloDias, data_inicio:dataInicio, data_fim:dataFim, ordem
+  });
+  if(error){ alert('Erro ao adicionar tarefa: '+error.message); return; }
+  await carregarTudo(); rerenderAtual();
 }
 
 /* EDIÇÃO INLINE */
@@ -1369,7 +1457,7 @@ function toggleEditDateRange(cid,period,idx){
   if(wrap) wrap.style.display=sel&&sel.value==='personalizado'?'flex':'none';
 }
 
-function saveEditTask(cid,period,idx){
+async function saveEditTask(cid,period,idx){
   const txtEl=document.getElementById(`edit-txt-${cid}-${period}-${idx}`);
   const freqEl=document.getElementById(`edit-freq-${cid}-${period}-${idx}`);
   const texto=txtEl?txtEl.value.trim():''; if(!texto) return;
@@ -1385,9 +1473,13 @@ function saveEditTask(cid,period,idx){
     } else { intervaloDias=7; }
   }
   const c=colabs.find(x=>x.id===cid); if(!c) return;
-  const old=normTask((c.checklists||{})[period]?.[idx]);
-  c.checklists[period][idx]={id:old.id,texto,frequencia,intervaloDias,dataInicio,dataFim};
-  saveColabs(colabs);
+  const old=normTask((c.checklists||{})[period]?.[idx]); if(!old) return;
+  const { error } = await sb.from('tarefas').update({
+    descricao:texto, frequencia, intervalo_dias:intervaloDias,
+    data_inicio:dataInicio, data_fim:dataFim
+  }).eq('id', old.id);
+  if(error){ alert('Erro ao salvar tarefa: '+error.message); return; }
+  await carregarTudo();
   cancelEditTask(cid,period);
 }
 
@@ -1397,13 +1489,12 @@ function cancelEditTask(cid,period){
   if(inInd) renderInd(); if(inMA) renderMA();
 }
 
-function delTask(cid,period,idx){
+async function delTask(cid,period,idx){
   const c=colabs.find(x=>x.id===cid); if(!c) return;
-  c.checklists[period].splice(idx,1);
-  saveColabs(colabs);
-  const inInd=document.getElementById('tp-ind').classList.contains('active');
-  const inMA =document.getElementById('tp-ma').classList.contains('active');
-  if(inInd) renderInd(); if(inMA) renderMA();
+  const task=(c.checklists||{})[period]?.[idx]; if(!task) return;
+  const { error } = await sb.from('tarefas').delete().eq('id', task.id); // cascata: apaga checkins
+  if(error){ alert('Erro ao remover tarefa: '+error.message); return; }
+  await carregarTudo(); rerenderAtual();
 }
 
 /* ══════════════════════════════════════════════
@@ -1416,7 +1507,6 @@ function showPeriod(p,el){
   renderGeralGrid(p);
 }
 function renderGeral(){
-  colabs=loadColabs();
   const n=colabs.length;
   document.getElementById('st-tot').textContent=n;
   let a=0,m=0,b=0;
@@ -1454,7 +1544,6 @@ function renderGeralGrid(p){
 ══════════════════════════════════════════════ */
 function renderMA(){
   if(!sess||sess.funcao!=='colaborador') return;
-  colabs=loadColabs();
   const el=document.getElementById('ma-content'); if(!el) return;
   const c=colabs.find(x=>x.id===sess.colabId);
   if(!c){
@@ -1498,8 +1587,18 @@ function renderMA(){
 /* ══════════════════════════════════════════════
    INIT
 ══════════════════════════════════════════════ */
-document.getElementById('auth-screen').style.display='flex';
-document.getElementById('app').style.display='none';
+(async function init(){
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  if(!sb){
+    document.getElementById('l-err').textContent=
+      'Configure SUPABASE_URL e SUPABASE_KEY no topo do <script> deste arquivo.';
+    return;
+  }
+  // Se já houver uma sessão válida salva, entra direto.
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session) await iniciarSessao(null);
+})();
 </script>
 </body>
 </html>
