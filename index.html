@@ -855,12 +855,7 @@ async function login(){
   if(!email||!senha){ err.textContent='Preencha todos os campos.'; return; }
 
   const { error } = await sb.auth.signInWithPassword({ email, password:senha });
-  if(error){
-    err.textContent = /not confirmed|email_not_confirmed/i.test(error.message)
-      ? 'Confirme seu e-mail antes de entrar (verifique sua caixa de entrada).'
-      : 'E-mail ou senha incorretos.';
-    return;
-  }
+  if(error){ err.textContent='E-mail ou senha incorretos.'; return; }
   await iniciarSessao(err);
 }
 
@@ -891,14 +886,13 @@ async function cadastrar(){
 
   if(!sb){ err.textContent='Sistema não configurado (faltam as credenciais do Supabase).'; return; }
   if(!nome||!email||!senha||!funcao){ err.textContent='Preencha todos os campos.'; return; }
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent='Digite um e-mail válido.'; return; }
   if(senha.length<6){ err.textContent='Senha deve ter ao menos 6 caracteres.'; return; }
 
-  // O perfil (com nome e função) é criado por um trigger no banco — porém SÓ depois que a
-  // pessoa confirma o e-mail pelo link. emailRedirectTo traz o link de volta para o app.
+  // O perfil (com nome e função) é criado automaticamente por um trigger no banco,
+  // lendo estes metadados. A regra do "primeiro sócio aprovado" também roda no banco.
   const { error } = await sb.auth.signUp({
     email, password:senha,
-    options:{ data:{ nome, funcao }, emailRedirectTo: window.location.origin }
+    options:{ data:{ nome, funcao } }
   });
   if(error){
     err.textContent = /registered|already/i.test(error.message)
@@ -906,11 +900,12 @@ async function cadastrar(){
     return;
   }
 
-  // Encerra qualquer sessão criada no cadastro (respeitando confirmação + aprovação).
+  // Encerra a sessão criada no cadastro para forçar login explícito (respeitando a aprovação).
   await sb.auth.signOut();
 
-  ok.textContent = 'Enviamos um link de confirmação para seu e-mail. Confirme para concluir; '
-    + 'depois um sócio analisa sua solicitação.';
+  ok.textContent = (funcao==='socio')
+    ? 'Cadastro de sócio enviado. O primeiro sócio entra direto; os demais aguardam aprovação.'
+    : 'Cadastro enviado! Aguarde a aprovação de um sócio para acessar.';
   ok.style.display='block';
   document.getElementById('c-nome').value='';
   document.getElementById('c-email').value='';

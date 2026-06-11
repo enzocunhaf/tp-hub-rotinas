@@ -86,9 +86,9 @@ AS $$
 $$;
 
 -- ═══════════════════════════════════════════════════════════
--- TRIGGER: cria APENAS o profile (a solicitação) e SÓ depois
--- que o e-mail é CONFIRMADO. O registro em "colaboradores" só
--- é criado quando o sócio APROVAR — feito pelo app.
+-- TRIGGER: ao cadastrar usuário, cria APENAS o profile (a
+-- solicitação). O registro em "colaboradores" só é criado
+-- quando o sócio APROVAR — feito pelo app.
 -- ═══════════════════════════════════════════════════════════
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
@@ -102,11 +102,6 @@ DECLARE
   v_ativo     BOOLEAN;
   v_has_socio BOOLEAN;
 BEGIN
-  -- Enquanto o e-mail não estiver confirmado, não cria a solicitação.
-  IF NEW.email_confirmed_at IS NULL THEN
-    RETURN NEW;
-  END IF;
-
   v_funcao := COALESCE(NEW.raw_user_meta_data->>'funcao', 'colaborador');
   v_nome   := COALESCE(NEW.raw_user_meta_data->>'nome', split_part(NEW.email, '@', 1));
 
@@ -119,26 +114,16 @@ BEGIN
 
   -- Cria só o perfil/solicitação (sem registro em colaboradores).
   INSERT INTO public.profiles (id, nome, email, funcao, ativo, colab_id)
-  VALUES (NEW.id, v_nome, NEW.email, v_funcao, v_ativo, NULL)
-  ON CONFLICT (id) DO NOTHING;
+  VALUES (NEW.id, v_nome, NEW.email, v_funcao, v_ativo, NULL);
 
   RETURN NEW;
 END;
 $$;
 
--- Dispara no cadastro (cobre o caso de confirmação DESLIGADA = auto-confirmado).
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- Dispara quando a pessoa CONFIRMA o e-mail (confirmação LIGADA).
-DROP TRIGGER IF EXISTS on_auth_user_confirmed ON auth.users;
-CREATE TRIGGER on_auth_user_confirmed
-  AFTER UPDATE OF email_confirmed_at ON auth.users
-  FOR EACH ROW
-  WHEN (OLD.email_confirmed_at IS NULL AND NEW.email_confirmed_at IS NOT NULL)
-  EXECUTE FUNCTION public.handle_new_user();
 
 -- ═══════════════════════════════════════════════════════════
 -- ROW LEVEL SECURITY (RLS) — REFORÇADO
